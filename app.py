@@ -6,8 +6,8 @@ class App:
     pygame.init()
     pygame.display.set_caption('3 Player Chess')
 
-    w_width, w_height = (960, 590)
-    window = pygame.display.set_mode((960, 590), pygame.RESIZABLE)
+    w_width, w_height = (1280, 720)
+    window = pygame.display.set_mode((1280, 720), pygame.RESIZABLE)
 
     left_click = False
 
