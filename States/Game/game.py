@@ -1,6 +1,7 @@
 import pygame
 from app import App
 from state import State
+from .polygon import gen_polygons, resize_polygons
 
 """
 Resiszing:
@@ -30,6 +31,7 @@ class Game(State):
         super().__init__()
         self.piece_image_dict = {}
         self.load_spritesheet()
+        self.graphical_pieces = []
 
         self.orig_board_image = pygame.image.load('./Assets/board.png').convert_alpha()
 
@@ -41,6 +43,9 @@ class Game(State):
         self.players_divider_rect = None
         self.clock_divider_rect = None
         self.board_rect = None
+
+        self.orig_segment_polygons = gen_polygons()
+        self.segment_polygons = None
 
         self.place_elements()
 
@@ -84,6 +89,11 @@ class Game(State):
         self.board_rect = pygame.Rect(*self.players_divider_rect.bottomleft, self.playing_divider_rect.width, board_height)
         self.clock_divider_rect = pygame.Rect(*self.board_rect.bottomleft, self.playing_divider_rect.width, CLOCK_HEIGHT)
 
+        self.segment_polygons = resize_polygons(self.orig_segment_polygons, board_scale)
+
+    def generate_pieces(self):
+        pass
+
     def resize(self, new_size):
         self.place_elements()
 
@@ -95,3 +105,7 @@ class Game(State):
 
         pygame.draw.rect(App.window, (227, 228, 224), self.move_divider_rect)
         App.window.blit(self.board_image, self.board_rect)
+
+        for segment in self.segment_polygons:
+            for poly in segment:
+                pygame.draw.polygon(App.window, (255, 0, 0), poly, width=2)
