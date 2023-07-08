@@ -47,14 +47,14 @@ def gen_polygons():
     return segment_polygons
 
 
-def resize_polygons(polygons, scale):
+def resize_polygons(polygons, scale, topleft):
     new_polygons = []
     for segment in polygons:
         new_segment = []
         for poly in segment:
             new_poly = []
             for vertex in poly:
-                new_poly.append((vertex[0] * scale, vertex[1] * scale))
+                new_poly.append((vertex[0] * scale + topleft[0], vertex[1] * scale + topleft[1]))
             new_segment.append(new_poly)
         new_polygons.append(new_segment)
 

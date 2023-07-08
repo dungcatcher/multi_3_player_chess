@@ -1,7 +1,12 @@
 import pygame
+import shapely
 from app import App
 from state import State
 from .polygon import gen_polygons, resize_polygons
+from .graphical_piece import GraphicalPiece, lerp2d
+from .classes import Position
+from .board import Board
+from .movegen import piece_movegen
 
 """
 Resiszing:
@@ -32,6 +37,7 @@ class Game(State):
         self.piece_image_dict = {}
         self.load_spritesheet()
         self.graphical_pieces = []
+        self.board = Board()
 
         self.orig_board_image = pygame.image.load('./Assets/board.png').convert_alpha()
 
@@ -48,6 +54,11 @@ class Game(State):
         self.segment_polygons = None
 
         self.place_elements()
+        self.generate_pieces()
+
+        # -------------
+
+        self.highlighted_piece = None  #
 
     def load_spritesheet(self):
         piece_size = 135
@@ -89,15 +100,67 @@ class Game(State):
         self.board_rect = pygame.Rect(*self.players_divider_rect.bottomleft, self.playing_divider_rect.width, board_height)
         self.clock_divider_rect = pygame.Rect(*self.board_rect.bottomleft, self.playing_divider_rect.width, CLOCK_HEIGHT)
 
-        self.segment_polygons = resize_polygons(self.orig_segment_polygons, board_scale)
+        self.segment_polygons = resize_polygons(self.orig_segment_polygons, board_scale, self.board_rect.topleft)
+
+        for piece in self.graphical_pieces:
+            piece.gen_image(self)
 
     def generate_pieces(self):
-        pass
+        for segment in range(3):
+            for row in range(4):
+                for col in range(8):
+                    piece_id = self.board.position[segment][row][col]
+                    if piece_id is not None:
+                        pos = Position(segment, (col, row))
+                        image = self.piece_image_dict[piece_id]
+                        new_piece = GraphicalPiece(piece_id, pos, image, self)
+                        self.graphical_pieces.append(new_piece)
 
     def resize(self, new_size):
         self.place_elements()
 
     def update(self):
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+
+        for piece in self.graphical_pieces:
+            if App.left_click:
+                if piece.rect.collidepoint((mouse_x, mouse_y)):
+                    piece.moves = piece_movegen(self.board, piece.pos, piece.piece_id[0])
+                    self.highlighted_piece = piece
+
+            if piece.is_moving:
+                piece.slide_amount += 0.1
+                piece.rect.center = lerp2d(piece.original_pixel_pos, piece.target_pixel_pos, piece.slide_amount)
+
+                if piece.slide_amount >= 1:
+                    piece.rect.center = piece.target_pixel_pos
+                    piece.original_pixel_pos = piece.target_pixel_pos
+                    piece.slide_amount = 0
+                    piece.moving = False
+
+        if self.highlighted_piece:
+            if pygame.mouse.get_pressed()[0]:
+                if self.highlighted_piece.rect.collidepoint((mouse_x, mouse_y)):
+                    self.highlighted_piece.image = self.highlighted_piece.selected_image
+                    self.highlighted_piece.rect = self.highlighted_piece.image.get_rect(center=(mouse_x, mouse_y))
+            else:
+                self.highlighted_piece.image = self.highlighted_piece.normal_image
+                self.highlighted_piece.rect = self.highlighted_piece.image.get_rect(center=self.highlighted_piece.original_pixel_pos)
+
+            for move in self.highlighted_piece.moves:
+                polygon_pts = self.segment_polygons[move.end.segment][int(move.end.square.y * 8 + move.end.square.x)]
+                polygon = shapely.Polygon(polygon_pts)
+
+                mouse_pos = shapely.Point(pygame.mouse.get_pos())
+                if polygon.contains(mouse_pos):
+                    end_pixel_pos = polygon.centroid.x, polygon.centroid.y
+                    if App.left_click:
+                        self.highlighted_piece.is_moving = True
+                        self.highlighted_piece.target_pixel_pos = end_pixel_pos
+                        self.highlighted_piece.pos = move.end
+                        self.board.make_move(move)
+                        self.highlighted_piece = None
+
         self.draw()
 
     def draw(self):
@@ -106,6 +169,23 @@ class Game(State):
         pygame.draw.rect(App.window, (227, 228, 224), self.move_divider_rect)
         App.window.blit(self.board_image, self.board_rect)
 
-        for segment in self.segment_polygons:
-            for poly in segment:
-                pygame.draw.polygon(App.window, (255, 0, 0), poly, width=2)
+        # board -> pieces -> highlighted moves
+
+        for piece in self.graphical_pieces:
+            if piece != self.highlighted_piece:
+                App.window.blit(piece.image, piece.rect)
+
+        if self.highlighted_piece:
+            for move in self.highlighted_piece.moves:
+                polygon_pts = self.segment_polygons[move.end.segment][int(move.end.square.y * 8 + move.end.square.x)]
+                polygon = shapely.Polygon(polygon_pts)
+                centre_x, centre_y = polygon.centroid.x, polygon.centroid.y
+
+                pygame.draw.circle(App.window, (255, 0, 0), (centre_x, centre_y), 10)
+
+                mouse_pos = shapely.Point(pygame.mouse.get_pos())
+                if polygon.contains(mouse_pos):
+                    pygame.draw.polygon(App.window, (255, 255, 255), polygon_pts, width=2)
+
+            App.window.blit(self.highlighted_piece.image, self.highlighted_piece.rect)
+

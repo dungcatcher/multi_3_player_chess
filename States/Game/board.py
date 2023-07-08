@@ -96,3 +96,12 @@ class Board:
         if len(self.checkmated_players) == 2:
             self.winner = self.turn
             print(self.winner)
+
+    def make_move(self, move):
+        move_colour = self.index_position(move.start)[0]
+
+        self.position = make_move(self, move).position
+        self.update_castling_rights(move)
+        self.enpassant_squares[move_colour] = None
+        if move.move_type == "double push":
+            self.enpassant_squares[move_colour] = Position(move.end.segment, (move.end.square.x, move.end.square.y + 1))
