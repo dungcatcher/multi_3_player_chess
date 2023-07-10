@@ -25,7 +25,7 @@ def gen_polygons():
     segment_polygons = []  # [segment: [polygon], ...]
 
     for segment in range(3):
-        degrees = 120 * segment
+        degrees = -120 * segment
         rotated_segment_points = []
         rotated_segment_polygons = []
 

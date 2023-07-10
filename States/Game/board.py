@@ -105,3 +105,6 @@ class Board:
         self.enpassant_squares[move_colour] = None
         if move.move_type == "double push":
             self.enpassant_squares[move_colour] = Position(move.end.segment, (move.end.square.x, move.end.square.y + 1))
+
+        self.turn_index = (self.turn_index + 1) % len(self.turns)
+        self.turn = self.turns[self.turn_index]

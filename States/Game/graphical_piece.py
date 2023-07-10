@@ -29,7 +29,7 @@ class GraphicalPiece:
         self.target_pixel_pos = None
         self.slide_amount = 0
 
-        self.selected = False
+        self.picked_up = False
         self.moves = []
 
     def gen_image(self, game):
