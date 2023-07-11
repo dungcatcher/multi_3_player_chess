@@ -82,15 +82,12 @@ class Board:
         if king_square != f'{piece_colour}k':  # If the king is not on its start square it has moved
             self.castling_rights[piece_colour]["queenside"] = False
             self.castling_rights[piece_colour]["kingside"] = False
-            print(self.castling_rights[piece_colour])
         kingside_rook_square = self.index_position(Position(colour_to_segment[piece_colour], (7, 3)))
         if kingside_rook_square is None or kingside_rook_square != f'{piece_colour}r':
             self.castling_rights[piece_colour]["kingside"] = False
-            print(self.castling_rights[piece_colour])
         queenside_rook_square = self.index_position(Position(colour_to_segment[piece_colour], (0, 3)))
         if queenside_rook_square is None or queenside_rook_square != f'{piece_colour}r':
             self.castling_rights[piece_colour]["queenside"] = False
-            print(self.castling_rights[piece_colour])
 
     def check_winner(self):
         if len(self.checkmated_players) == 2:

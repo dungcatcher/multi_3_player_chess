@@ -116,15 +116,50 @@ class Game(State):
                         new_piece = GraphicalPiece(piece_id, pos, image, self)
                         self.graphical_pieces.append(new_piece)
 
+    def get_piece_at(self, pos):
+        for piece in self.graphical_pieces:
+            if piece.pos == pos:
+                return piece
+
+    def update_piece_move(self, piece, move, is_drop):  # Give GraphicalPiece that moved, drop:
+        polygon = shapely.Polygon(self.segment_polygons[move.end.segment][int(move.end.square.y * 8 + move.end.square.x)])
+        end_pixel_pos = polygon.centroid.x, polygon.centroid.y
+
+        piece.do_move(end_pixel_pos, is_drop)
+
+        # Capture
+        if self.board.index_position(move.end):
+            if self.board.index_position(move.end)[0] != self.highlighted_piece.piece_id[0]:
+                capture_piece = self.get_piece_at(move.end)
+                self.graphical_pieces.remove(capture_piece)
+        # Castle
+        if move.move_type == 'kingside castle' or move.move_type == 'queenside castle':
+            if move.move_type == 'kingside castle':
+                rook_pos = Position(move.end.segment, (move.end.square.x + 1, move.end.square.y))
+                rook_end_pos = Position(rook_pos.segment, (rook_pos.square.x - 2, rook_pos.square.y))
+            else:
+                rook_pos = Position(move.end.segment, (move.end.square.x - 2, move.end.square.y))
+                rook_end_pos = Position(rook_pos.segment, (rook_pos.square.x + 3, rook_pos.square.y))
+
+            rook = self.get_piece_at(rook_pos)
+            rook_end_polygon = shapely.Polygon(self.segment_polygons[rook_end_pos.segment][int(rook_end_pos.square.y * 8 + rook_end_pos.square.x)])
+            rook_end_pixel_pos = rook_end_polygon.centroid.x, rook_end_polygon.centroid.y
+            rook.do_move(rook_end_pixel_pos, is_drop=is_drop)
+            rook.pos = rook_end_pos
+
+        # Enpassant
+        if move.move_type == 'enpassant':
+            capture_pos = Position(move.end.segment, (move.end.square.x, move.end.square.y - 1))
+            capture_piece = self.get_piece_at(capture_pos)
+            self.graphical_pieces.remove(capture_piece)
+
+        piece.pos = move.end
+
     def resize(self, new_size):
         self.place_elements()
 
     def update(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()
-
-        """
-        Clean up code, fix drag and drop
-        """
 
         # Dragging if piece is clicked on, and mouse is held down
         # Dropped if mouse is let go, after clicking on piece
@@ -132,26 +167,18 @@ class Game(State):
         drop = False
 
         # Highlighted piece detection
-        if App.left_click:
-            for piece in self.graphical_pieces:
+        for piece in self.graphical_pieces:
+            if App.left_click:
                 if piece.rect.collidepoint((mouse_x, mouse_y)):
                     if piece.piece_id[0] == self.board.turn:
                         piece.moves = piece_movegen(self.board, piece.pos, piece.piece_id[0])
                         self.highlighted_piece = piece
 
-                # Animation for moving piece
-                if piece.is_moving:
-                    piece.slide_amount += 0.1
-                    piece.rect.center = lerp2d(piece.original_pixel_pos, piece.target_pixel_pos, piece.slide_amount)
-
-                    if piece.slide_amount >= 1:
-                        piece.rect.center = piece.target_pixel_pos
-                        piece.original_pixel_pos = piece.target_pixel_pos
-                        piece.slide_amount = 0
-                        piece.moving = False
+            if piece.is_moving:
+                piece.do_animation()
 
         if self.highlighted_piece:
-            if pygame.mouse.get_pressed()[0]: # Drag
+            if pygame.mouse.get_pressed()[0]:  # Drag
                 if not self.highlighted_piece.picked_up:
                     if self.highlighted_piece.rect.collidepoint((mouse_x, mouse_y)):
                         self.highlighted_piece.picked_up = True
@@ -167,7 +194,7 @@ class Game(State):
                         center=self.highlighted_piece.original_pixel_pos)
 
             if self.highlighted_piece.picked_up:
-                self.highlighted_piece.rect.center = (mouse_x, mouse_y)
+                self.highlighted_piece.rect.center = (mouse_x, mouse_y)  # Move with mouse
 
             # Click or drop on move square
             for move in self.highlighted_piece.moves:
@@ -176,24 +203,8 @@ class Game(State):
 
                 mouse_pos = shapely.Point(pygame.mouse.get_pos())
                 if polygon.contains(mouse_pos):
-                    end_pixel_pos = polygon.centroid.x, polygon.centroid.y
-                    if App.left_click or drop:
-                        if App.left_click:
-                            self.highlighted_piece.is_moving = True
-                            self.highlighted_piece.target_pixel_pos = end_pixel_pos
-                        else:
-                            self.highlighted_piece.original_pixel_pos = end_pixel_pos
-                            self.highlighted_piece.rect = self.highlighted_piece.image.get_rect(  # Move to new pos
-                                center=self.highlighted_piece.original_pixel_pos)
-
-                        if self.board.index_position(move.end):
-                            if self.board.index_position(move.end)[0] != self.highlighted_piece.piece_id[0]:
-                                for piece in self.graphical_pieces:
-                                    if piece.pos.segment == move.end.segment and piece.pos.square == move.end.square:
-                                        self.graphical_pieces.remove(piece)
-
-                        self.highlighted_piece.pos = move.end
-
+                    if App.left_click or drop:  # Make the move
+                        self.update_piece_move(self.highlighted_piece, move, drop)
                         self.board.make_move(move)
                         self.highlighted_piece = None
 
@@ -206,8 +217,11 @@ class Game(State):
         App.window.blit(self.board_image, self.board_rect)
 
         for piece in self.graphical_pieces:
-            if piece != self.highlighted_piece:
+            if piece != self.highlighted_piece:  # For ordering
                 App.window.blit(piece.image, piece.rect)
+            else:
+                if piece.picked_up:
+                    App.window.blit(piece.ghost_image, piece.ghost_rect)
 
         if self.highlighted_piece:
             for move in self.highlighted_piece.moves:

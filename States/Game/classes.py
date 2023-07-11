@@ -6,6 +6,9 @@ class Position:
         self.segment = segment
         self.square = Vector2(square)
 
+    def __eq__(self, other):
+        return self.segment == other.segment and self.square == other.square
+
 
 class Move:
     def __init__(self, start, end, move_type="normal", is_promotion=False, promo_type=None):
