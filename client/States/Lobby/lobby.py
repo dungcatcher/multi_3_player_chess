@@ -1,7 +1,6 @@
-import pygame
-from app import App
-from state import State
-from widget import Button
+from client.app import App
+from client.state import State
+from client.widget import Button
 
 
 class Lobby(State):

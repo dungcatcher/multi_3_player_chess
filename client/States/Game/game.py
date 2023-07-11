@@ -1,12 +1,12 @@
 import pygame
 import shapely
-from app import App
-from state import State
+from client.app import App
+from client.state import State
 from .polygon import gen_polygons, resize_polygons
-from .graphical_piece import GraphicalPiece, lerp2d
-from .classes import Position
-from .board import Board
-from .movegen import piece_movegen
+from .graphical_piece import GraphicalPiece
+from chesslogic.classes import Position
+from chesslogic.board import Board
+from chesslogic.movegen import piece_movegen
 
 """
 Resiszing:

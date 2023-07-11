@@ -1,5 +1,5 @@
-from .movegen import piece_movegen, make_move, colour_to_segment
-from .classes import Position
+from chesslogic.movegen import piece_movegen, make_move, colour_to_segment
+from chesslogic.classes import Position
 
 STARTING_POSITION = [
     [  # White segment

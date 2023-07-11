@@ -1,7 +1,8 @@
-from app import App
-from States.Menu.menu import Menu
-from States.Game.game import Game
-from States.Lobby.lobby import Lobby
+from client.app import App
+from client.States.Menu.menu import Menu
+from client.States.Game.game import Game
+from client.States.Lobby.lobby import Lobby
+from client.States.Login.login import Login
 
 """
 Moving to client and server folders:
@@ -34,9 +35,10 @@ def main():
     state_dict = {
         'menu': Menu(),
         'game': Game(),
-        'lobby': Lobby()
+        'lobby': Lobby(),
+        'login': Login()
     }
-    App.init_states(state_dict, 'menu')
+    App.init_states(state_dict, 'login')
     App.loop()
 
 

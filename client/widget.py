@@ -1,6 +1,6 @@
 import pygame
 import pygame.freetype
-from app import App
+from client.app import App
 
 
 class Widget:
