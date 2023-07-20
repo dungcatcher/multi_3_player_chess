@@ -12,6 +12,7 @@ class Widget:
         self.anchor = anchor
         self.rect: pygame.Rect
 
+        self.disabled = False
         self.hovered = False
 
 
@@ -41,18 +42,22 @@ class Button(Widget):
         App.window.blit(text_surf, text_rect)
 
     def update(self):
-        mouse_x, mouse_y = pygame.mouse.get_pos()
+        if not self.disabled:
+            mouse_x, mouse_y = pygame.mouse.get_pos()
 
-        if self.rect.collidepoint((mouse_x, mouse_y)):
-            self.hovered = True
-            self.text_colour = (255, 255, 255)
-        else:
-            self.hovered = False
-            self.text_colour = (0, 0, 0)
+            if self.rect.collidepoint((mouse_x, mouse_y)):
+                self.hovered = True
+                self.text_colour = (255, 255, 255)
+            else:
+                self.hovered = False
+                self.text_colour = (0, 0, 0)
 
     def draw(self):
-        if self.hovered:
-            pygame.draw.rect(App.window, (0, 0, 0), self.rect)
+        if not self.disabled:
+            if self.hovered:
+                pygame.draw.rect(App.window, (0, 0, 0), self.rect)
+        else:
+            pygame.draw.rect(App.window, (128, 128, 128), self.rect)
 
         self.draw_text()
 

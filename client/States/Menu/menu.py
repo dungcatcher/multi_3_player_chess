@@ -6,20 +6,23 @@ from client.state import State
 class Menu(State):
     def __init__(self):
         super().__init__()
-        self.solo_button = Button(100, 100, 200, 50, 'Play solo', 'topleft')
-        self.multi_button = Button(100, 200, 300, 50, 'Play with friends', 'topleft')
+        self.analysis_button = Button(100, 100, 200, 50, 'Analysis', 'topleft')
+        self.play_button = Button(100, 200, 200, 50, 'Play', 'topleft')
 
     def update(self):
-        self.solo_button.update()
-        self.multi_button.update()
+        if not App.connected:
+            self.play_button.disabled = True
+
+        self.analysis_button.update()
+        self.play_button.update()
 
         if App.left_click:
-            if self.solo_button.hovered:
+            if self.analysis_button.hovered:
                 self.done = True
-                self.next = 'game'
+                self.next = 'analysis'
 
         if App.left_click:
-            if self.multi_button.hovered:
+            if self.play_button.hovered:
                 self.done = True
                 self.next = 'lobby'
 
@@ -27,6 +30,6 @@ class Menu(State):
 
     def draw(self):
         App.window.fill((250, 245, 240))
-        self.solo_button.draw()
-        self.multi_button.draw()
+        self.analysis_button.draw()
+        self.play_button.draw()
 

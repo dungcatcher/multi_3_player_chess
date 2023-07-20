@@ -8,22 +8,10 @@ from chesslogic.classes import Position
 from chesslogic.board import Board
 from chesslogic.movegen import piece_movegen
 
-# https://websockets.readthedocs.io/en/stable/intro/tutorial1.html
-
 """
-Resiszing:
-
-Board and move table always in the center
-Player names at the top
-CLock at the bottom
-
-Board + clock + player names = height of window
-Board minimum size - TBD
-Move divider minimum size
-
-Main div
-Move divider
+Fix code, merge with Game state
 """
+
 SIDE_PADDING = 25
 
 CLOCK_HEIGHT = 75
@@ -32,7 +20,7 @@ MOVE_DIVIDER_MIN_WIDTH = 250
 MOVE_DIVIDER_MAX_WIDTH = 350
 
 
-class Game(State):
+class Analysis(State):
     def __init__(self):
         super().__init__()
         self.piece_image_dict = {}

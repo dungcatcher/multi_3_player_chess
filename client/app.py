@@ -1,5 +1,6 @@
 import pygame
 import pygame.freetype
+from .app_client import Client
 
 
 class App:
@@ -16,6 +17,8 @@ class App:
     _clock = pygame.time.Clock()
     _state_dict = None
     _current_state = None
+
+    client = None
 
     @staticmethod
     def init_states(state_dict, start_state_name):
@@ -55,6 +58,8 @@ class App:
 
     @staticmethod
     def loop():
+        # App.client = Client()
+
         while not App._done:
             App._clock.tick(60)
             App.event_loop()
