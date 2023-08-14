@@ -12,7 +12,12 @@ class Server:
 
     def client_handler(self, conn, addr):
         while True:
-            pass
+            with conn:
+                while True:
+                    data = conn.recv(1024)
+                    if not data:
+                        break
+                    print(data.decode())
 
     def loop(self):
         with self.socket as s:
