@@ -40,7 +40,7 @@ class Game(State):
         self.graphical_pieces = []
         self.board = Board()
 
-        self.orig_board_image = pygame.image.load('../Assets/board.png').convert_alpha()
+        self.orig_board_image = pygame.image.load('./Assets/board.png').convert_alpha()
 
         # Initialised in resize function
         self.board_image: pygame.image
@@ -63,7 +63,7 @@ class Game(State):
 
     def load_spritesheet(self):
         piece_size = 135
-        chess_sprite_image = pygame.image.load('../Assets/chess_pieces.png').convert_alpha()
+        chess_sprite_image = pygame.image.load('./Assets/chess_pieces.png').convert_alpha()
 
         piece_letters = ['k', 'q', 'b', 'n', 'r', 'p']
         piece_colours = ['w', 'b', 'r']

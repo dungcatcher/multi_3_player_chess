@@ -26,7 +26,7 @@ class Button(Widget):
         self.text_colour = (0, 0, 0)
 
         font_size = int(0.75 * (height - 2 * self.padding))
-        self.font = pygame.freetype.Font('../Assets/UnivaNova-Regular.ttf', font_size)
+        self.font = pygame.freetype.Font('./Assets/UnivaNova-Regular.ttf', font_size)
         self.rect = pygame.Rect(0, 0, width, height)
         setattr(self.rect, anchor, (x, y))  # Position rect
 

@@ -1,6 +1,6 @@
 import pygame
 import pygame.freetype
-from .app_client import Client
+import asyncio
 
 
 class App:
@@ -58,8 +58,6 @@ class App:
 
     @staticmethod
     def loop():
-        # App.client = Client()
-
         while not App._done:
             App._clock.tick(60)
             App.event_loop()
