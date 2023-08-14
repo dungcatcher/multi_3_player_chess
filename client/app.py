@@ -1,6 +1,6 @@
 import pygame
 import pygame.freetype
-import asyncio
+from app_client import AppClient
 
 
 class App:
@@ -11,7 +11,6 @@ class App:
     window = pygame.display.set_mode((1280, 720), pygame.RESIZABLE)
 
     left_click = False
-    connected = False  # connected to server or not
 
     _done = False
     _clock = pygame.time.Clock()
@@ -58,6 +57,8 @@ class App:
 
     @staticmethod
     def loop():
+        App.client = AppClient()
+
         while not App._done:
             App._clock.tick(60)
             App.event_loop()

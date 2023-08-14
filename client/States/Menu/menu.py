@@ -10,7 +10,7 @@ class Menu(State):
         self.play_button = Button(100, 200, 200, 50, 'Play', 'topleft')
 
     def update(self):
-        if not App.connected:
+        if not App.client.connected:
             self.play_button.disabled = True
 
         self.analysis_button.update()

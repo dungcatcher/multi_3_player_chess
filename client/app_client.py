@@ -1,17 +1,20 @@
 import socket
-import asyncio
+import threading
 
 HOST = "localhost"
 PORT = 65432
 
 
-client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+class AppClient:
+    def __init__(self):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.connected = False
+        connect_thread = threading.Thread(target=self.connect_to_server, daemon=True)
+        connect_thread.start()
 
-
-async def connect_to_server():
-    with client_socket as s:
-        s.connect((HOST, PORT))
-        s.sendall(b'Hello World')
+    def connect_to_server(self):
+        self.socket.connect((HOST, PORT))
         print('connected')
+        self.connected = True
+        self.socket.sendall(b'Hello World')
 
-asyncio.create_task(connect_to_server())
