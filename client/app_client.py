@@ -12,9 +12,11 @@ class AppClient:
         connect_thread = threading.Thread(target=self.connect_to_server, daemon=True)
         connect_thread.start()
 
+    def send_packet(self, packet):
+        with self.socket as s:
+            s.sendall(packet.encode())
+
     def connect_to_server(self):
         self.socket.connect((HOST, PORT))
         print('connected')
         self.connected = True
-        self.socket.sendall(b'Hello World')
-

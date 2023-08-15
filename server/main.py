@@ -1,5 +1,6 @@
 import socket
 import threading
+import json
 
 HOST = "localhost"
 PORT = 65432
@@ -10,14 +11,20 @@ class Server:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind((HOST, PORT))
 
+    def handle_response(self, response):
+        decoded = response.decode()
+        response_dict = json.loads(decoded)
+        if response_dict['type'] == 'login':
+            login_data = json.loads(response_dict['data'])
+            print(login_data)
+
     def client_handler(self, conn, addr):
-        while True:
-            with conn:
-                while True:
-                    data = conn.recv(1024)
-                    if not data:
-                        break
-                    print(data.decode())
+        with conn:
+            while True:
+                data = conn.recv(1024)
+                if not data:
+                    break
+                self.handle_response(data)
 
     def loop(self):
         with self.socket as s:
