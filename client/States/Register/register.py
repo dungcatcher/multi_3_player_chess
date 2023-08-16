@@ -1,7 +1,7 @@
 import pygame
 import json
 from client.app import App
-from client.widget import Button, TextBox
+from client.widget import Label, Button, TextBox
 from client.state import State
 
 
@@ -12,15 +12,17 @@ class Register(State):
         self.main_div_rect.center = App.window.get_width() / 2, App.window.get_height() / 2
 
         self.username_input = TextBox(self.main_div_rect.left, self.main_div_rect.top, self.main_div_rect.width, self.main_div_rect.height * 0.15,
-                                      anchor='topleft', align='left', hide_text=False)
+                                      'topleft', 'Username', align='left', hide_text=False)
         self.password_input = TextBox(self.main_div_rect.left, self.main_div_rect.top + self.main_div_rect.height * 0.2, self.main_div_rect.width,
-                                      self.main_div_rect.height * 0.15, anchor='topleft', align='left', hide_text=True)
+                                      self.main_div_rect.height * 0.15, 'topleft', 'Password', align='left', hide_text=True)
         self.password_confirmation_input = TextBox(self.main_div_rect.left, self.main_div_rect.top + self.main_div_rect.height * 0.4, self.main_div_rect.width,
-                                      self.main_div_rect.height * 0.15, anchor='topleft', align='left', hide_text=True)
+                                      self.main_div_rect.height * 0.15, 'topleft', 'Confirm Password', align='left', hide_text=True)
         self.register_button = Button(self.main_div_rect.centerx, self.main_div_rect.top + self.main_div_rect.height * 0.6, self.main_div_rect.width * 0.4,
                                       self.main_div_rect.height * 0.15, 'Register', 'midtop', align='center')
 
-        self.input_error = None
+        self.error_label = Label(self.main_div_rect.x, self.main_div_rect.top - 0.05 * self.main_div_rect.height, self.main_div_rect.width, self.main_div_rect.height * 0.2,
+                                 '', 'bottomleft', (255, 170, 170), (241, 128, 126), (241, 128, 126), align='left', border_width=3)
+        self.error_label.hidden = True
 
     def get_event(self, event):
         self.username_input.handle_event(event)
@@ -52,7 +54,9 @@ class Register(State):
                     packet_json = json.dumps(packet_data)
                     App.client.send_packet(packet_json)
                 else:
-                    self.input_error = 'not matching'
+                    self.error_label.hidden = False
+                    self.error_label.text = 'Passwords do not match'
+
 
             if self.username_input.hovered:
                 self.username_input.selected = True
@@ -60,6 +64,8 @@ class Register(State):
                 self.password_input.selected = True
             if self.password_confirmation_input.hovered:
                 self.password_confirmation_input.selected = True
+
+
 
         self.draw()
 
@@ -69,4 +75,5 @@ class Register(State):
         self.password_input.draw()
         self.password_confirmation_input.draw()
         self.register_button.draw()
+        self.error_label.draw()
 

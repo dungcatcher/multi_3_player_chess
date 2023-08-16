@@ -21,6 +21,28 @@ class Widget:
         self.hovered = False
 
 
+class Label(Widget):
+    def __init__(self, x, y, width, height, label, anchor, bg_colour, outline_colour, text_colour, align='left', border_width=1):
+        super().__init__(x, y, width, height, anchor)
+        self.label = label
+        self.bg_colour = bg_colour
+        self.outline_colour = outline_colour
+        self.text_colour = text_colour
+        self.align = align
+        self.border_width = border_width
+
+        self.hidden = False
+        self.rect = pygame.Rect(0, 0, width, height)
+        setattr(self.rect, anchor, (x, y))  # Position rect
+
+    def draw(self):
+        if not self.hidden:
+            text_surf, text_rect = self.font.render(self.label, self.text_colour)
+            pygame.draw.rect(App.window, self.bg_colour, self.rect)
+            pygame.draw.rect(App.window, self.outline_colour, self.rect, width=self.border_width)
+            App.window.blit(text_surf, text_rect)
+
+
 class Button(Widget):
     def __init__(self, x, y, width, height, label, anchor, align='left', border_width=1):
         super().__init__(x, y, width, height, anchor)
@@ -67,10 +89,11 @@ class Button(Widget):
 
 
 class TextBox(Widget):
-    def __init__(self, x, y, width, height, anchor, align='left', border_width=1, hide_text=False):
+    def __init__(self, x, y, width, height, anchor, placeholder, align='left', border_width=1, hide_text=False):
         super().__init__(x, y, width, height, anchor)
         self.align = align
         self.border_width = border_width
+        self.placeholder = placeholder
         self.hide_text = hide_text
 
         self.rect = pygame.Rect(0, 0, width, height)
@@ -83,21 +106,25 @@ class TextBox(Widget):
         self.next_step_time = 0
 
     def draw_text(self):
-        if not self.hide_text:
-            text_surf, text_rect = self.font.render(self.text, self.text_colour)
+        if not self.text:
+            text_surf, text_rect = self.font.render(self.placeholder, (128, 128, 128))
         else:
-            text_surf, text_rect = self.font.render(len(self.text) * 'x', self.text_colour)
+            if not self.hide_text:
+                text_surf, text_rect = self.font.render(self.text, self.text_colour)
+            else:
+                text_surf, text_rect = self.font.render(len(self.text) * 'x', self.text_colour)
 
-        if self.align == 'left':
-            text_rect.midleft = self.rect.left + self.padding, self.rect.centery
-        if self.align == 'center':
-            text_rect.center = self.rect.center
-        if self.align == 'right':
-            text_rect.midright = self.rect.right - self.padding, self.rect.centery
+        if text_surf and text_rect:
+            if self.align == 'left':
+                text_rect.midleft = self.rect.left + self.padding, self.rect.centery
+            if self.align == 'center':
+                text_rect.center = self.rect.center
+            if self.align == 'right':
+                text_rect.midright = self.rect.right - self.padding, self.rect.centery
 
-        self.text_rect = text_rect
+            self.text_rect = text_rect
 
-        App.window.blit(text_surf, text_rect)
+            App.window.blit(text_surf, text_rect)
 
     def handle_event(self, event):
         if self.selected:
@@ -132,5 +159,6 @@ class TextBox(Widget):
 
             if self.selected:
                 if self.show_cursor:
-                    cursor_rect = pygame.Rect(self.text_rect.right, self.text_rect.top, 2, self.text_rect.height)
+                    cursor_x = self.text_rect.right if self.text else self.rect.left + self.padding
+                    cursor_rect = pygame.Rect(cursor_x, self.rect.top + self.padding, 2, self.rect.height - self.padding * 2)
                     pygame.draw.rect(App.window, (0, 0, 0), cursor_rect)

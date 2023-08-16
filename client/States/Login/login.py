@@ -13,9 +13,9 @@ class Login(State):
         self.main_div_rect.center = App.window.get_width() / 2, App.window.get_height() / 2
 
         self.username_input = TextBox(self.main_div_rect.left, self.main_div_rect.top, self.main_div_rect.width, self.main_div_rect.height * 0.15,
-                                      anchor='topleft', align='left', hide_text=False)
+                                      'topleft', 'Username', align='left', hide_text=False)
         self.password_input = TextBox(self.main_div_rect.left, self.main_div_rect.top + self.main_div_rect.height * 0.2, self.main_div_rect.width,
-                                      self.main_div_rect.height * 0.15, anchor='topleft', align='left', hide_text=True)
+                                      self.main_div_rect.height * 0.15, 'topleft', 'Password', align='left', hide_text=True)
         self.login_button = Button(self.main_div_rect.centerx, self.main_div_rect.top + self.main_div_rect.height * 0.4, self.main_div_rect.width * 0.4,
                                    self.main_div_rect.height * 0.15, 'Login', 'midtop', align='center')
         self.register_button = Button(self.main_div_rect.centerx, self.main_div_rect.top + self.main_div_rect.height * 0.6,
