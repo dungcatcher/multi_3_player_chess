@@ -10,13 +10,21 @@ class Server:
     def __init__(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind((HOST, PORT))
+        with open('users.json') as f:
+            self.users = json.load(f)
 
     def handle_response(self, response):
         decoded = response.decode()
         response_dict = json.loads(decoded)
         if response_dict['type'] == 'login':
             login_data = json.loads(response_dict['data'])
-            print(login_data)
+        if response_dict['type'] == 'register':
+            register_data = json.loads(response_dict['data'])
+            if register_data['username'] not in self.users.keys():
+                self.users[register_data['username']] = {'password': register_data['password']}
+                print(self.users)
+            else:
+                print('already exists')
 
     def client_handler(self, conn, addr):
         with conn:

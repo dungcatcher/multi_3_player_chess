@@ -20,6 +20,8 @@ class Register(State):
         self.register_button = Button(self.main_div_rect.centerx, self.main_div_rect.top + self.main_div_rect.height * 0.6, self.main_div_rect.width * 0.4,
                                       self.main_div_rect.height * 0.15, 'Register', 'midtop', align='center')
 
+        self.input_error = None
+
     def get_event(self, event):
         self.username_input.handle_event(event)
         self.password_input.handle_event(event)
@@ -34,26 +36,30 @@ class Register(State):
         if App.left_click:
             self.username_input.selected = False
             self.password_input.selected = False
+            self.password_confirmation_input.selected = False
 
             if self.register_button.hovered:
-                login_data = {
-                    'username': self.username_input.text,
-                    'password': self.password_input.text
-                }
-                json_packet = json.dumps(login_data)
-                packet_data = {
-                    'type': 'login',
-                    'data': json_packet
-                }
-                packet_json = json.dumps(packet_data)
-                App.client.send_packet(packet_json)
+                if self.password_input.text == self.password_confirmation_input.text:
+                    register_data = {
+                        'username': self.username_input.text,
+                        'password': self.password_input.text
+                    }
+                    json_packet = json.dumps(register_data)
+                    packet_data = {
+                        'type': 'register',
+                        'data': json_packet
+                    }
+                    packet_json = json.dumps(packet_data)
+                    App.client.send_packet(packet_json)
+                else:
+                    self.input_error = 'not matching'
 
             if self.username_input.hovered:
                 self.username_input.selected = True
             if self.password_input.hovered:
                 self.password_input.selected = True
             if self.password_confirmation_input.hovered:
-                self.password_input.selected = True
+                self.password_confirmation_input.selected = True
 
         self.draw()
 

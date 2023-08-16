@@ -13,8 +13,7 @@ class AppClient:
         connect_thread.start()
 
     def send_packet(self, packet):
-        with self.socket as s:
-            s.sendall(packet.encode())
+        self.socket.sendall(packet.encode())
 
     def connect_to_server(self):
         self.socket.connect((HOST, PORT))
