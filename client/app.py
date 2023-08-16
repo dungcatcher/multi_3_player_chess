@@ -1,5 +1,6 @@
 import pygame
 import pygame.freetype
+import os, sys
 from app_client import AppClient
 
 

@@ -1,5 +1,6 @@
 import pygame
 import shapely
+import os
 from client.app import App
 from client.state import State
 from .polygon import gen_polygons, resize_polygons
