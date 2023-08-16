@@ -22,7 +22,8 @@ class Server:
             register_data = json.loads(response_dict['data'])
             if register_data['username'] not in self.users.keys():
                 self.users[register_data['username']] = {'password': register_data['password']}
-                print(self.users)
+                with open('users.json', 'w') as f:
+                    json.dump(self.users, f)
             else:
                 print('already exists')
 
