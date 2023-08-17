@@ -32,7 +32,11 @@ class App:
 
     @staticmethod
     def flip_state():
+        old_state = App._current_state
         App._current_state = App._state_dict[App._current_state.next]
+        old_state.done = False
+        old_state.next = None
+        old_state.reset()
 
     @staticmethod
     def update():

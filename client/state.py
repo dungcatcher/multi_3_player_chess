@@ -15,3 +15,6 @@ class State:
 
     def draw(self):
         pass
+
+    def reset(self):
+        pass

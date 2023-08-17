@@ -24,16 +24,20 @@ class Register(State):
                                  '', 'bottomleft', (255, 170, 170), (241, 128, 126), (241, 128, 126), align='left', border_width=3)
         self.error_label.hidden = True
 
+        self.back_button = Button(50, 50, App.window.get_width() * 0.1, App.window.get_height() * 0.05, 'Back', 'topleft', align='left')
+
     def get_event(self, event):
         self.username_input.handle_event(event)
         self.password_input.handle_event(event)
         self.password_confirmation_input.handle_event(event)
 
+    """Use functions for error labels"""
     def update(self):
         self.username_input.update()
         self.password_input.update()
         self.password_confirmation_input.update()
         self.register_button.update()
+        self.back_button.update()
 
         if App.left_click:
             self.username_input.selected = False
@@ -55,8 +59,10 @@ class Register(State):
                     App.client.send_packet(packet_json)
                 else:
                     self.error_label.hidden = False
+                    self.error_label.bg_colour = (255, 170, 170)
+                    self.error_label.outline_colour = (241, 128, 126)
+                    self.error_label.text_colour = (241, 128, 126)
                     self.error_label.label = 'Passwords do not match'
-
 
             if self.username_input.hovered:
                 self.username_input.selected = True
@@ -65,7 +71,25 @@ class Register(State):
             if self.password_confirmation_input.hovered:
                 self.password_confirmation_input.selected = True
 
+            if self.back_button.hovered:
+                self.done = True
+                self.next = 'login'
 
+        if App.client.last_message:
+            if App.client.last_message['type'] == 'register':
+                if App.client.last_message['data'] == 'created':  # Successful
+                    self.error_label.hidden = False
+                    self.error_label.label = 'Account created successfully'
+                    self.error_label.bg_colour = (170, 255, 170)
+                    self.error_label.outline_colour = (128, 241, 126)
+                    self.error_label.text_colour = (128, 241, 126)
+                else:
+                    self.error_label.hidden = False
+                    self.error_label.label = 'Account already exists'
+                    self.error_label.bg_colour = (255, 170, 170)
+                    self.error_label.outline_colour = (241, 128, 126)
+                    self.error_label.text_colour = (241, 128, 126)
+                App.client.last_message = None
 
         self.draw()
 
@@ -76,4 +100,7 @@ class Register(State):
         self.password_confirmation_input.draw()
         self.register_button.draw()
         self.error_label.draw()
+        self.back_button.draw()
 
+    def reset(self):
+        self.error_label.hidden = True

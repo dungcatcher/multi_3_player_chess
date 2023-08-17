@@ -1,7 +1,7 @@
 import pygame
 import json
 from client.app import App
-from client.widget import Button, TextBox
+from client.widget import Label, Button, TextBox
 from client.state import State
 
 
@@ -21,6 +21,12 @@ class Login(State):
         self.register_button = Button(self.main_div_rect.centerx, self.main_div_rect.top + self.main_div_rect.height * 0.6,
                                    self.main_div_rect.width * 0.4,
                                    self.main_div_rect.height * 0.15, 'Register', 'midtop', align='center')
+
+        self.error_label = Label(self.main_div_rect.x, self.main_div_rect.top - 0.05 * self.main_div_rect.height,
+                                 self.main_div_rect.width, self.main_div_rect.height * 0.2,
+                                 '', 'bottomleft', (255, 170, 170), (241, 128, 126), (241, 128, 126), align='left',
+                                 border_width=3)
+        self.error_label.hidden = True
 
     def get_event(self, event):
         self.username_input.handle_event(event)
@@ -61,6 +67,26 @@ class Login(State):
             if self.password_input.hovered:
                 self.password_input.selected = True
 
+        if App.client.last_message:
+            if App.client.last_message['type'] == 'login':
+                if App.client.last_message['data'] == 'not found':
+                    self.error_label.hidden = False
+                    self.error_label.label = 'Account does not exist'
+                    self.error_label.bg_colour = (255, 170, 170)
+                    self.error_label.outline_colour = (241, 128, 126)
+                    self.error_label.text_colour = (241, 128, 126)
+                if App.client.last_message['data'] == 'incorrect password':
+                    self.error_label.hidden = False
+                    self.error_label.label = 'Username or password is incorrect'
+                    self.error_label.bg_colour = (255, 170, 170)
+                    self.error_label.outline_colour = (241, 128, 126)
+                    self.error_label.text_colour = (241, 128, 126)
+                if App.client.last_message['data'] == 'logged in':
+                    App.client.logged_in = True
+                    self.done = True
+                    self.next = 'menu'
+                App.client.last_message = None
+
         self.draw()
 
     def draw(self):
@@ -70,4 +96,5 @@ class Login(State):
         self.password_input.draw()
         self.login_button.draw()
         self.register_button.draw()
+        self.error_label.draw()
 
