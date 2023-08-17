@@ -55,7 +55,7 @@ class Register(State):
                     App.client.send_packet(packet_json)
                 else:
                     self.error_label.hidden = False
-                    self.error_label.text = 'Passwords do not match'
+                    self.error_label.label = 'Passwords do not match'
 
 
             if self.username_input.hovered:
