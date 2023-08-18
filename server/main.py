@@ -5,7 +5,7 @@ import random
 import string
 import pickle
 import codecs
-from chesslogic.game import Game
+from server.game import Game
 
 HOST = "localhost"
 PORT = 65432
@@ -26,6 +26,15 @@ class Server:
         self.addresses = {}
 
         self.games = {}
+
+    def gen_game_packet_data(self, game_id):
+        game = self.games[game_id]
+        # Use player names
+        data = {
+            'id': game_id,
+            'players': game.players
+        }
+        return data
 
     def handle_response(self, conn, addr, response):
         decoded = response.decode()
@@ -56,17 +65,17 @@ class Server:
 
         if response_dict['type'] == 'queue':
             if response_dict['data'] == 'new':
-                game_id = ''.join(random.choice(string.digits + string.ascii_letters) for i in range(10))  # Random game id
+                game_id = ''.join(random.choice(string.digits + string.ascii_letters) for _ in range(10))  # Random game id
                 new_game = Game()
                 new_game.add_player(addr)
                 self.games[game_id] = new_game
                 # Send all games to client
-                pickled_games = codecs.encode(pickle.dumps(self.games), 'base64').decode()
-                response_data = {
+                game_json_list = [self.gen_game_packet_data(game_id) for game_id in self.games.keys()]
+                game_packet = {
                     'type': 'queue',
-                    'data': pickled_games
+                    'data': game_json_list
                 }
-                send_response(conn, response_data)
+                send_response(conn, game_packet)
 
     def client_handler(self, conn, addr):
         with conn:

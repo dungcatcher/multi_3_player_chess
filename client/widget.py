@@ -45,11 +45,12 @@ class Label(Widget):
 
 
 class Button(Widget):
-    def __init__(self, x, y, width, height, label, anchor, align='left', border_width=1):
+    def __init__(self, x, y, width, height, label, anchor, identifier='', align='left', border_width=1):
         super().__init__(x, y, width, height, anchor)
         self.label = label
         self.align = align
         self.border_width = border_width
+        self.identifier = identifier
 
         self.rect = pygame.Rect(0, 0, width, height)
         setattr(self.rect, anchor, (x, y))  # Position rect
