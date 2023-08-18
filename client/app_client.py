@@ -36,3 +36,4 @@ class AppClient:
                 decoded_data = data.decode()
                 data_dict = json.loads(decoded_data)
                 self.last_message = data_dict
+                print(self.last_message)

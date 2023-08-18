@@ -20,7 +20,7 @@ class Lobby(State):
         new_buttons = []
         for i, game in enumerate(self.server_games):
             new_button = Button(self.game_select_div.left, self.game_select_div.top + i * (0.1 * self.game_select_div.height),
-                                self.game_select_div.width, self.game_select_div.height * 0.1, f'{game["id"]} players: {len(game["players"])}', 'topleft', identifier=game['id'], align='left')
+                                self.game_select_div.width, self.game_select_div.height * 0.1, f'{game["id"]} players: {game["players"]}', 'topleft', identifier=game['id'], align='left')
             new_buttons.append(new_button)
         self.game_select_buttons = new_buttons
 
@@ -52,6 +52,9 @@ class Lobby(State):
                 self.server_games = games_data
                 self.gen_games_buttons()
                 App.client.last_message = None
+            elif App.client.last_message['type'] == 'game start':
+                self.done = True
+                self.next = 'game'
 
         self.draw()
 

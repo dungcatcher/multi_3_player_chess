@@ -1,3 +1,4 @@
+import json
 from client.app import App
 from client.widget import Button
 from client.state import State
@@ -25,6 +26,15 @@ class Menu(State):
             if self.play_button.hovered:
                 self.done = True
                 self.next = 'lobby'
+
+                # Request queue data
+                request_data = {
+                    'type': 'queue',
+                    'data': 'init'
+                }
+                request_packet = json.dumps(request_data)
+                App.client.send_packet(request_packet)
+                print(request_packet)
 
         self.draw()
 

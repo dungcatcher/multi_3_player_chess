@@ -24,22 +24,31 @@ class Server:
             self.users = json.load(f)
 
         self.addresses = {}
-        self.online = []
+        self.in_lobby = []
+
+        self.logged_in = {}  # username: socket
 
         self.games = {}
 
     def gen_game_packet_data(self, game_id):
         game = self.games[game_id]
         # Use player names
+        player_names = []
+        for username, user_socket in self.logged_in.items():
+            for player_socket in game.players:
+                if player_socket == user_socket:
+                    player_names.append(username)
         data = {
             'id': game_id,
-            'players': game.players
+            'players': player_names
         }
         return data
 
     def handle_response(self, conn, addr, response):
         decoded = response.decode()
         response_dict = json.loads(decoded)
+
+        # ----- Login -----
         if response_dict['type'] == 'login':
             login_data = json.loads(response_dict['data'])
             if login_data['username'] not in self.users.keys():  # Account doesn't exist, error
@@ -47,11 +56,17 @@ class Server:
                 send_response(conn, response_data)
             else:
                 if login_data['password'] == self.users[login_data['username']]['password']:  # Password is correct
-                    response_data = {'type': 'login', 'data': 'logged in'}
-                    send_response(conn, response_data)
+                    if login_data['username'] not in self.logged_in.keys():
+                        self.logged_in[login_data['username']] = conn
+                        response_data = {'type': 'login', 'data': 'logged in'}
+                        send_response(conn, response_data)
+                    else:
+                        print('Already logged in')
                 else:
                     response_data = {'type': 'login', 'data': 'incorrect password'}
                     send_response(conn, response_data)
+
+        # ----- Register -----
         if response_dict['type'] == 'register':
             register_data = json.loads(response_dict['data'])
             if register_data['username'] not in self.users.keys():  # Account doesn't exist, good
@@ -64,24 +79,44 @@ class Server:
                 response_data = {'type': 'register', 'data': 'already exists'}
                 send_response(conn, response_data)
 
+        # ----- Queue -----
         if response_dict['type'] == 'queue':
-            if response_dict['data'] == 'new':
+            if response_dict['data'] == 'new':  # New game created
                 game_id = ''.join(random.choice(string.digits + string.ascii_letters) for _ in range(10))  # Random game id
                 new_game = Game()
-                new_game.add_player(addr)
+                new_game.add_player(conn)
                 self.games[game_id] = new_game
-            else:
+            elif response_dict['data'] != 'init':  # Joined existing game
                 target_game_id = response_dict['data']
-                if addr not in self.games[target_game_id].players:
-                    self.games[target_game_id].add_player()
+                if not self.games[target_game_id].started:
+                    already_in_game = False
+                    # Not already in a game
+                    for game in self.games.values():
+                        if conn in game.players:
+                            already_in_game = True
+                    if not already_in_game:
+                        self.games[target_game_id].add_player(conn)
+                        # Check to see if the game has started
+                        if self.games[target_game_id].started:
+                            response_data = {'type': 'game start', 'data': ''}
+                            for player_conn in self.games[target_game_id].players:
+                                send_response(player_conn, response_data)
+                                self.in_lobby.remove(player_conn)
+                    else:
+                        print('Already in game')
                 else:
-                    print('Already in game')
+                    print('Game is full')
+            elif response_dict['data'] == 'init':
+                self.in_lobby.append(conn)
+            # Includes init
             game_json_list = [self.gen_game_packet_data(game_id) for game_id in self.games.keys()]
             game_packet = {
                 'type': 'queue',
                 'data': game_json_list
             }
-            send_response(conn, game_packet)
+            # Update all users in lobby
+            for user_conn in self.in_lobby:
+                send_response(user_conn, game_packet)
 
     def client_handler(self, conn, addr):
         with conn:
