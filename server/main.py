@@ -24,6 +24,7 @@ class Server:
             self.users = json.load(f)
 
         self.addresses = {}
+        self.online = []
 
         self.games = {}
 
@@ -69,13 +70,18 @@ class Server:
                 new_game = Game()
                 new_game.add_player(addr)
                 self.games[game_id] = new_game
-                # Send all games to client
-                game_json_list = [self.gen_game_packet_data(game_id) for game_id in self.games.keys()]
-                game_packet = {
-                    'type': 'queue',
-                    'data': game_json_list
-                }
-                send_response(conn, game_packet)
+            else:
+                target_game_id = response_dict['data']
+                if addr not in self.games[target_game_id].players:
+                    self.games[target_game_id].add_player()
+                else:
+                    print('Already in game')
+            game_json_list = [self.gen_game_packet_data(game_id) for game_id in self.games.keys()]
+            game_packet = {
+                'type': 'queue',
+                'data': game_json_list
+            }
+            send_response(conn, game_packet)
 
     def client_handler(self, conn, addr):
         with conn:

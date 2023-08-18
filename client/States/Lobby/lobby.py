@@ -20,7 +20,7 @@ class Lobby(State):
         new_buttons = []
         for i, game in enumerate(self.server_games):
             new_button = Button(self.game_select_div.left, self.game_select_div.top + i * (0.1 * self.game_select_div.height),
-                                self.game_select_div.width, self.game_select_div.height * 0.1, game['id'], 'topleft', identifier=game['id'], align='left')
+                                self.game_select_div.width, self.game_select_div.height * 0.1, f'{game["id"]} players: {len(game["players"])}', 'topleft', identifier=game['id'], align='left')
             new_buttons.append(new_button)
         self.game_select_buttons = new_buttons
 
@@ -39,7 +39,12 @@ class Lobby(State):
                 App.client.send_packet(queue_packet)
             for button in self.game_select_buttons:
                 if button.hovered:
-                    print(button.identifier)
+                    queue_data = {
+                        'type': 'queue',
+                        'data': button.identifier
+                    }
+                    queue_packet = json.dumps(queue_data)
+                    App.client.send_packet(queue_packet)
 
         if App.client.last_message:
             if App.client.last_message['type'] == 'queue':
