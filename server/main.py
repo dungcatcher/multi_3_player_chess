@@ -6,8 +6,8 @@ import string
 from server.game import Game
 from chesslogic.classes import json_to_move_obj
 
-HOST = "oggyp.com"
-PORT = 3384
+HOST = "localhost"
+PORT = 65432
 
 
 def send_response(conn, response):

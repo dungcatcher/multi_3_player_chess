@@ -22,5 +22,5 @@ class Game:
         self.available_colours.remove(player_colour)
         self.player_data[username]['colour'] = player_colour
 
-        if len(self.player_data.keys()) == 2:
+        if len(self.player_data.keys()) == 3:
             self.started = True
