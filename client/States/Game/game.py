@@ -204,7 +204,7 @@ class Game(State):
         for piece in self.graphical_pieces:
             if App.left_click:
                 if piece.rect.collidepoint((mouse_x, mouse_y)):
-                    if piece.piece_id[0] == self.board.turn:
+                    if piece.piece_id[0] == self.board.turn and piece.piece_id[0] == self.colour:
                         piece.moves = piece_movegen(self.board, piece.pos, piece.piece_id[0])
                         self.highlighted_piece = piece
 
