@@ -83,6 +83,7 @@ class Login(State):
                     self.error_label.text_colour = (241, 128, 126)
                 if App.client.last_message['data'] == 'logged in':
                     App.client.logged_in = True
+                    App.client.username = self.username_input.text
                     self.done = True
                     self.next = 'menu'
                 App.client.last_message = None

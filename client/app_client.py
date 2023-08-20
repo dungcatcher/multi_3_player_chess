@@ -13,6 +13,7 @@ class AppClient:
         self.last_message = None
 
         self.logged_in = False
+        self.username = None
 
         connect_thread = threading.Thread(target=self.connect_to_server, daemon=True)
         connect_thread.start()
@@ -36,4 +37,3 @@ class AppClient:
                 decoded_data = data.decode()
                 data_dict = json.loads(decoded_data)
                 self.last_message = data_dict
-                print(self.last_message)

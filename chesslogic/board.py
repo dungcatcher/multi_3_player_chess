@@ -58,7 +58,7 @@ class Board:
         Board is represented as a list of 2d arrays of the 3 8x4 segments
         """
         self.position = STARTING_POSITION
-        self.turns = ["w", "r", "b"]
+        self.turns = ["w", "b", "r"]
         self.turn_index = 0
         self.turn = self.turns[self.turn_index]
         self.winner = None

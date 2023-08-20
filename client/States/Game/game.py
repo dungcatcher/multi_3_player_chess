@@ -1,10 +1,11 @@
 import pygame
 import shapely
+import json
 from client.app import App
 from client.state import State
 from .polygon import gen_polygons, resize_polygons
 from .graphical_piece import GraphicalPiece
-from chesslogic.classes import Position
+from chesslogic.classes import Position, json_to_move_obj
 from chesslogic.board import Board
 from chesslogic.movegen import piece_movegen
 
@@ -44,6 +45,7 @@ class Game(State):
 
         # Initialised in resize function
         self.board_image: pygame.image
+        self.board_scale = 1
         self.main_rect: pygame.Rect
         self.playing_divider_rect: pygame.Rect
         self.move_divider_rect: pygame.Rect
@@ -57,9 +59,13 @@ class Game(State):
         self.place_elements()
         self.generate_pieces()
 
-        # -------------
+        self.highlighted_piece = None
 
-        self.highlighted_piece = None  #
+        # -------- Game start -----------------
+
+        self.colour = None
+        self.rotation_idx = 0  # 0: white, 1: black: 2: red
+        self.game_id = None
 
     def load_spritesheet(self):
         piece_size = 135
@@ -79,8 +85,8 @@ class Game(State):
         main_height = App.window.get_height() - 2 * SIDE_PADDING
 
         board_height = main_height - 2 * CLOCK_HEIGHT
-        board_scale = board_height / self.orig_board_image.get_height()
-        board_width = self.orig_board_image.get_width() * board_scale
+        self.board_scale = board_height / self.orig_board_image.get_height()
+        board_width = self.orig_board_image.get_width() * self.board_scale
         self.board_image = pygame.transform.smoothscale(self.orig_board_image, (board_width, board_height))
 
         test_move_divider_width = (App.window.get_width() - 2 * SIDE_PADDING) - board_width - SIDE_PADDING
@@ -101,7 +107,7 @@ class Game(State):
         self.board_rect = pygame.Rect(*self.players_divider_rect.bottomleft, self.playing_divider_rect.width, board_height)
         self.clock_divider_rect = pygame.Rect(*self.board_rect.bottomleft, self.playing_divider_rect.width, CLOCK_HEIGHT)
 
-        self.segment_polygons = resize_polygons(self.orig_segment_polygons, board_scale, self.board_rect.topleft)
+        self.segment_polygons = resize_polygons(self.orig_segment_polygons, self.board_scale, self.board_rect.topleft)
 
         for piece in self.graphical_pieces:
             piece.gen_image(self)
@@ -122,15 +128,32 @@ class Game(State):
             if piece.pos == pos:
                 return piece
 
-    def update_piece_move(self, piece, move, is_drop):  # Give GraphicalPiece that moved, drop:
-        polygon = shapely.Polygon(self.segment_polygons[move.end.segment][int(move.end.square.y * 8 + move.end.square.x)])
+    # 0: white, 1: black, 2: red
+    def flip_board(self):
+        board_image_copy = self.board_image.copy()
+        rotation_angle = -120 * self.rotation_idx
+        rotated_image = pygame.transform.rotate(board_image_copy, rotation_angle)
+        rotated_image_rect = rotated_image.get_rect(center=self.board_rect.center)
+        self.board_image = rotated_image
+        self.board_rect = rotated_image_rect
+
+        for piece in self.graphical_pieces:
+            polygon = self.segment_polygons[(piece.pos.segment - self.rotation_idx) % 3][int(piece.pos.square.y * 8 + piece.pos.square.x)]
+            polygon = shapely.Polygon(polygon)
+            piece.rect = piece.image.get_rect(center=(polygon.centroid.x, polygon.centroid.y))
+            piece.ghost_rect = piece.rect.copy()
+            piece.original_pixel_pos = (polygon.centroid.x, polygon.centroid.y)
+
+    def update_piece_move(self, piece, move, is_drop, server_move=False):  # Give GraphicalPiece that moved, drop:
+        polygon = shapely.Polygon(self.segment_polygons[(move.end.segment - self.rotation_idx) % 3]
+                                  [int(move.end.square.y * 8 + move.end.square.x)])
         end_pixel_pos = polygon.centroid.x, polygon.centroid.y
 
         piece.do_move(end_pixel_pos, is_drop)
 
         # Capture
         if self.board.index_position(move.end):
-            if self.board.index_position(move.end)[0] != self.highlighted_piece.piece_id[0]:
+            if self.board.index_position(move.end)[0] != piece.piece_id[0]:
                 capture_piece = self.get_piece_at(move.end)
                 self.graphical_pieces.remove(capture_piece)
         # Castle
@@ -143,7 +166,8 @@ class Game(State):
                 rook_end_pos = Position(rook_pos.segment, (rook_pos.square.x + 3, rook_pos.square.y))
 
             rook = self.get_piece_at(rook_pos)
-            rook_end_polygon = shapely.Polygon(self.segment_polygons[rook_end_pos.segment][int(rook_end_pos.square.y * 8 + rook_end_pos.square.x)])
+            rook_end_polygon = shapely.Polygon(self.segment_polygons[(rook_end_pos.segment - self.rotation_idx) % 3]
+                                               [int(rook_end_pos.square.y * 8 + rook_end_pos.square.x)])
             rook_end_pixel_pos = rook_end_polygon.centroid.x, rook_end_polygon.centroid.y
             rook.do_move(rook_end_pixel_pos, is_drop=is_drop)
             rook.pos = rook_end_pos
@@ -156,10 +180,19 @@ class Game(State):
 
         piece.pos = move.end
 
-    def resize(self, new_size):
-        self.place_elements()
+        # -------------------- Send move to server ---------------------------
+        if not server_move:
+            colour = self.board.index_position(move.start)[0]
+            move_data = move.gen_json(colour)
+            move_data['game id'] = self.game_id
+            packet_data = {
+                'type': 'move',
+                'data': move_data
+            }
+            packet_json = json.dumps(packet_data)
+            App.client.send_packet(packet_json)
 
-    def update(self):
+    def handle_drag_and_drop(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()
 
         # Dragging if piece is clicked on, and mouse is held down
@@ -199,7 +232,7 @@ class Game(State):
 
             # Click or drop on move square
             for move in self.highlighted_piece.moves:
-                polygon_pts = self.segment_polygons[move.end.segment][int(move.end.square.y * 8 + move.end.square.x)]
+                polygon_pts = self.segment_polygons[(move.end.segment - self.rotation_idx) % 3][int(move.end.square.y * 8 + move.end.square.x)]
                 polygon = shapely.Polygon(polygon_pts)
 
                 mouse_pos = shapely.Point(pygame.mouse.get_pos())
@@ -208,6 +241,32 @@ class Game(State):
                         self.update_piece_move(self.highlighted_piece, move, drop)
                         self.board.make_move(move)
                         self.highlighted_piece = None
+
+    def resize(self, new_size):
+        self.place_elements()
+
+    def update(self):
+        self.handle_drag_and_drop()
+
+        if App.client.last_message:
+            if App.client.last_message['type'] == 'game start':
+                self.colour = App.client.last_message['data']['colours'][App.client.username]
+                self.rotation_idx = self.board.turns.index(self.colour)
+                print(self.colour, self.rotation_idx)
+
+                self.game_id = App.client.last_message['data']['game id']
+
+                self.flip_board()
+            if App.client.last_message['type'] == 'move':
+                move_obj = json_to_move_obj(App.client.last_message['data'])
+                print(move_obj.start)
+                target_piece = None
+                for piece in self.graphical_pieces:
+                    if piece.pos == move_obj.start:
+                        target_piece = piece
+                self.update_piece_move(target_piece, move_obj, is_drop=False, server_move=True)
+                self.board.make_move(move_obj)
+            App.client.last_message = None
 
         self.draw()
 
@@ -226,7 +285,7 @@ class Game(State):
 
         if self.highlighted_piece:
             for move in self.highlighted_piece.moves:
-                polygon_pts = self.segment_polygons[move.end.segment][int(move.end.square.y * 8 + move.end.square.x)]
+                polygon_pts = self.segment_polygons[(move.end.segment - self.rotation_idx) % 3][int(move.end.square.y * 8 + move.end.square.x)]
                 polygon = shapely.Polygon(polygon_pts)
                 centre_x, centre_y = polygon.centroid.x, polygon.centroid.y
 
