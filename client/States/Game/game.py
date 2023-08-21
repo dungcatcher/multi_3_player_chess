@@ -8,6 +8,7 @@ from .graphical_piece import GraphicalPiece
 from chesslogic.classes import Position, json_to_move_obj
 from chesslogic.board import Board
 from chesslogic.movegen import piece_movegen
+from .move_table import get_move_notation
 
 # https://websockets.readthedocs.io/en/stable/intro/tutorial1.html
 
@@ -77,6 +78,11 @@ class Game(State):
         self.orig_promotion_images = []
         self.promotion_images = []
         self.promotion_pieces = ['q', 'n', 'r', 'b']
+
+        # Move table
+        self.move_table_title_rect = pygame.Rect(self.move_divider_rect.left, self.move_divider_rect.top,
+                                                 self.move_divider_rect.width, self.move_divider_rect.height * 0.08)
+        self.move_list = []  # [white, black, red], ...
 
     def load_spritesheet(self):
         piece_size = 135
@@ -165,6 +171,8 @@ class Game(State):
             piece.update_pixel_pos(self)
 
     def update_piece_move(self, piece, move, is_drop, server_move=False):  # Give GraphicalPiece that moved, drop:
+        print(get_move_notation(self.board, move))
+
         polygon = shapely.Polygon(self.segment_polygons[(move.end.segment - self.rotation_idx) % 3]
                                   [int(move.end.square.y * 8 + move.end.square.x)])
         end_pixel_pos = polygon.centroid.x, polygon.centroid.y
@@ -323,7 +331,6 @@ class Game(State):
                         self.promotion_polygons = []
                         self.orig_promotion_images = []
                         self.promotion_images = []
-
                         break
 
         if App.client.last_message:
