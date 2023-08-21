@@ -15,7 +15,7 @@ class Widget:
         self.text_colour = (0, 0, 0)
         self.padding = 10
         font_size = int(0.75 * (height - 2 * self.padding))
-        self.font = pygame.freetype.Font('../Assets/UnivaNova-Regular.ttf', font_size)
+        self.font = pygame.freetype.Font('./Assets/UnivaNova-Regular.ttf', font_size)
 
         self.disabled = False
         self.hovered = False

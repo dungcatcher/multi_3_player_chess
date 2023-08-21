@@ -19,7 +19,7 @@ class Server:
     def __init__(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind((HOST, PORT))
-        with open('users.json') as f:
+        with open('data/users.json') as f:
             self.users = json.load(f)
 
         self.addresses = {}
@@ -86,7 +86,7 @@ class Server:
             register_data = json.loads(response_dict['data'])
             if register_data['username'] not in self.users.keys():  # Account doesn't exist, good
                 self.users[register_data['username']] = {'password': register_data['password']}
-                with open('users.json', 'w') as f:
+                with open('data/users.json', 'w') as f:
                     json.dump(self.users, f)
                 response_data = {'type': 'register', 'data': 'created'}
                 send_response(conn, response_data)
