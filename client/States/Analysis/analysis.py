@@ -103,7 +103,8 @@ class Analysis(State):
                     if piece_id is not None:
                         pos = Position(segment, (col, row))
                         image = self.piece_image_dict[piece_id]
-                        new_piece = GraphicalPiece(piece_id, pos, image, self)
+                        dead_image = self.piece_image_dict['d' + piece_id[1]]
+                        new_piece = GraphicalPiece(piece_id, pos, image, dead_image, self)
                         self.graphical_pieces.append(new_piece)
 
     def get_piece_at(self, pos):

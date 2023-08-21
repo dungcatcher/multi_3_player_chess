@@ -1,4 +1,4 @@
-from chesslogic.movegen import piece_movegen, make_move, colour_to_segment
+from chesslogic.movegen import piece_movegen, make_move, colour_to_segment, get_game_state
 from chesslogic.classes import Position
 
 STARTING_POSITION = [
@@ -105,3 +105,24 @@ class Board:
 
         self.turn_index = (self.turn_index + 1) % len(self.turns)
         self.turn = self.turns[self.turn_index]
+
+        """
+        Everytime a move is a made, check for players in stalemate add to list (clear first)
+        Also check for players in checkmate, add to list
+        Skip turn if they are in checkmate or stalemate
+        """
+
+        # Check if the next player is in checkmate or stalemate
+        self.stalemated_players = []
+        self.checkmated_players = []
+        for turn in self.turns:
+            game_state = get_game_state(self, turn)
+            if game_state == 'stalemate':
+                self.stalemated_players.append(turn)
+            if game_state == 'checkmate':
+                self.checkmated_players.append(turn)
+
+        # Skip turn
+        if self.turn in self.stalemated_players or self.turn in self.checkmated_players:
+            self.turn_index = (self.turn_index + 1) % len(self.turns)
+            self.turn = self.turns[self.turn_index]

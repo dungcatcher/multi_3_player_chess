@@ -11,14 +11,16 @@ def lerp2d(pos0, pos1, t):
 
 
 class GraphicalPiece:
-    def __init__(self, piece_id, pos, image, game):
+    def __init__(self, piece_id, pos, image, dead_image, game):
         # take in position argument and piece_id, calculates image and rect based on it
         self.piece_id = piece_id
         self.orig_image = image
+        self.orig_dead_image = dead_image
         self.pos = pos
 
         self.image = None
-        self.normal_image = None
+        self.dead_image = None
+        self.normal_image = None  # Normal state
         self.ghost_image = None
         self.ghost_rect = None
         self.selected_image = None
@@ -61,12 +63,19 @@ class GraphicalPiece:
         self.normal_image = pygame.transform.smoothscale(
             self.orig_image, (0.07 * game.board_image.get_height(), 0.07 * game.board_image.get_height())
         )
+        self.dead_image = pygame.transform.smoothscale(
+            self.orig_dead_image, (0.07 * game.board_image.get_height(), 0.07 * game.board_image.get_height())
+        )
         self.selected_image = pygame.transform.smoothscale(
             self.orig_image, (0.1 * game.board_image.get_height(), 0.1 * game.board_image.get_height())
         )
         self.ghost_image = self.normal_image.copy()
         self.ghost_image.set_alpha(128)
-        self.image = self.normal_image
+
+        if not self.dead:
+            self.image = self.normal_image
+        else:
+            self.image = self.dead_image
 
         polygon = game.segment_polygons[self.pos.segment][int(self.pos.square.y * 8 + self.pos.square.x)]
         polygon = shapely.Polygon(polygon)

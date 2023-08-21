@@ -72,7 +72,7 @@ class Game(State):
         chess_sprite_image = pygame.image.load('../Assets/chess_pieces.png').convert_alpha()
 
         piece_letters = ['k', 'q', 'b', 'n', 'r', 'p']
-        piece_colours = ['w', 'b', 'r']
+        piece_colours = ['w', 'b', 'r', 'd']
         for col, letter in enumerate(piece_letters):
             for row, colour in enumerate(piece_colours):
                 piece_rect = pygame.Rect(col * piece_size, row * piece_size, piece_size, piece_size)
@@ -120,8 +120,18 @@ class Game(State):
                     if piece_id is not None:
                         pos = Position(segment, (col, row))
                         image = self.piece_image_dict[piece_id]
-                        new_piece = GraphicalPiece(piece_id, pos, image, self)
+                        dead_image = self.piece_image_dict['d' + piece_id[1]]
+                        new_piece = GraphicalPiece(piece_id, pos, image, dead_image, self)
                         self.graphical_pieces.append(new_piece)
+
+    def update_dead_pieces(self):
+        dead_pieces = self.board.checkmated_players + self.board.stalemated_players
+        for piece in self.graphical_pieces:
+            if piece.piece_id[0] in dead_pieces:
+                piece.dead = True
+                piece.gen_image(self)
+            else:
+                piece.dead = False
 
     def get_piece_at(self, pos):
         for piece in self.graphical_pieces:

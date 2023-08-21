@@ -155,6 +155,10 @@ def get_checkers(board, colour):  # Check for teams checking a colour's king
 
     return checkers
 
+"""
+Stalemated image until released, check if they are still stalemated
+   
+"""
 
 def get_game_state(board, colour):  # Checks for checkmate, stalemate or still playing
     legal_move_found = False
