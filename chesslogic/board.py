@@ -89,11 +89,6 @@ class Board:
         if queenside_rook_square is None or queenside_rook_square != f'{piece_colour}r':
             self.castling_rights[piece_colour]["queenside"] = False
 
-    def check_winner(self):
-        if len(self.checkmated_players) == 2:
-            self.winner = self.turn
-            print(self.winner)
-
     def make_move(self, move):
         move_colour = self.index_position(move.start)[0]
 
@@ -114,15 +109,17 @@ class Board:
 
         # Check if the next player is in checkmate or stalemate
         self.stalemated_players = []
-        self.checkmated_players = []
         for turn in self.turns:
             game_state = get_game_state(self, turn)
             if game_state == 'stalemate':
                 self.stalemated_players.append(turn)
-            if game_state == 'checkmate':
-                self.checkmated_players.append(turn)
+            if turn not in self.checkmated_players:  # Checkmated players can't be taken out of check
+                if game_state == 'checkmate':
+                    self.checkmated_players.append(turn)
 
-        print(self.checkmated_players, self.stalemated_players)
+        if len(self.checkmated_players) == 2:
+            self.winner = self.turn
+            print(self.winner)
 
         # Skip turn
         if self.turn in self.stalemated_players or self.turn in self.checkmated_players:

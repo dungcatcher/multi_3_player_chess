@@ -53,6 +53,14 @@ class Game(State):
         self.clock_divider_rect: pygame.Rect
         self.board_rect: pygame.Rect
 
+        # -------- Game start -----------------
+
+        self.colour = None
+        self.rotation_idx = 0  # 0: white, 1: black: 2: red
+        self.game_id = None
+
+        # ------------------------------------
+
         self.orig_segment_polygons = gen_polygons()
         self.segment_polygons = None
 
@@ -61,11 +69,14 @@ class Game(State):
 
         self.highlighted_piece = None
 
-        # -------- Game start -----------------
-
-        self.colour = None
-        self.rotation_idx = 0  # 0: white, 1: black: 2: red
-        self.game_id = None
+        # Promoting
+        self.is_promoting = False
+        self.promotion_move = None
+        self.promotion_piece = None
+        self.promotion_polygons = []
+        self.orig_promotion_images = []
+        self.promotion_images = []
+        self.promotion_pieces = ['q', 'n', 'r', 'b']
 
     def load_spritesheet(self):
         piece_size = 135
@@ -112,6 +123,8 @@ class Game(State):
         for piece in self.graphical_pieces:
             piece.gen_image(self)
 
+        self.flip_board()
+
     def generate_pieces(self):
         for segment in range(3):
             for row in range(4):
@@ -129,7 +142,8 @@ class Game(State):
         for piece in self.graphical_pieces:
             if piece.piece_id[0] in dead_pieces:
                 piece.dead = True
-                piece.gen_image(self)
+                piece.image = piece.dead_image
+                piece.update_pixel_pos(self)
             else:
                 piece.dead = False
 
@@ -148,18 +162,27 @@ class Game(State):
         self.board_rect = rotated_image_rect
 
         for piece in self.graphical_pieces:
-            polygon = self.segment_polygons[(piece.pos.segment - self.rotation_idx) % 3][int(piece.pos.square.y * 8 + piece.pos.square.x)]
-            polygon = shapely.Polygon(polygon)
-            piece.rect = piece.image.get_rect(center=(polygon.centroid.x, polygon.centroid.y))
-            piece.ghost_rect = piece.rect.copy()
-            piece.original_pixel_pos = (polygon.centroid.x, polygon.centroid.y)
+            piece.update_pixel_pos(self)
 
     def update_piece_move(self, piece, move, is_drop, server_move=False):  # Give GraphicalPiece that moved, drop:
         polygon = shapely.Polygon(self.segment_polygons[(move.end.segment - self.rotation_idx) % 3]
                                   [int(move.end.square.y * 8 + move.end.square.x)])
         end_pixel_pos = polygon.centroid.x, polygon.centroid.y
 
-        piece.do_move(end_pixel_pos, is_drop)
+        # Promotion
+        if not move.is_promotion:
+            piece.do_move(end_pixel_pos, is_drop)
+        else:
+            # Create a new piece on the promotion square
+            pos = move.end
+            piece_id = piece.piece_id[0] + move.promo_type
+            image = self.piece_image_dict[piece_id]
+            dead_image = self.piece_image_dict['d' + piece_id[1]]
+            new_piece = GraphicalPiece(piece_id, pos, image, dead_image, self)
+            new_piece.gen_image(self)
+            self.graphical_pieces.append(new_piece)
+
+            self.graphical_pieces.remove(piece)  # Remove original piece
 
         # Capture
         if self.board.index_position(move.end):
@@ -248,16 +271,60 @@ class Game(State):
                 mouse_pos = shapely.Point(pygame.mouse.get_pos())
                 if polygon.contains(mouse_pos):
                     if App.left_click or drop:  # Make the move
-                        self.update_piece_move(self.highlighted_piece, move, drop)
-                        self.board.make_move(move)
-                        self.update_dead_pieces()
+                        if not move.is_promotion:
+                            self.update_piece_move(self.highlighted_piece, move, drop)
+                            self.board.make_move(move)
+                            self.update_dead_pieces()
+                        else:  # User must select what type of promotion
+                            self.is_promoting = True
+                            self.promotion_move = move
+                            # Calculate promotion stuff
+                            for row in range(4):
+                                # Polygon
+                                polygon_pts = self.segment_polygons[(move.end.segment + self.rotation_idx) % 3][int((move.end.square.y - row) * 8 + move.end.square.x)]
+                                self.promotion_polygons.append(polygon_pts)
+                                # Image
+                                piece_type = self.promotion_pieces[row]
+                                piece_orig_image = self.piece_image_dict[self.colour + piece_type]
+                                piece_image = pygame.transform.smoothscale(piece_orig_image,
+                                    (0.07 * self.board_image.get_height(), 0.07 * self.board_image.get_height())
+                                )
+                                self.orig_promotion_images.append(piece_orig_image)
+                                self.promotion_images.append(piece_image)
+
+                                self.promotion_piece = self.highlighted_piece
                         self.highlighted_piece = None
+
 
     def resize(self, new_size):
         self.place_elements()
 
     def update(self):
-        self.handle_drag_and_drop()
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+
+        if not self.is_promoting:
+            self.handle_drag_and_drop()
+        else:
+            mouse_point = shapely.Point((mouse_x, mouse_y))
+            for i, polygon_pts in enumerate(self.promotion_polygons):
+                polygon = shapely.Polygon(polygon_pts)
+                if App.left_click:
+                    if polygon.contains(mouse_point):
+                        promo_piece = self.promotion_pieces[i]
+                        self.promotion_move.promo_type = promo_piece
+
+                        self.update_piece_move(self.promotion_piece, self.promotion_move, True)
+                        self.board.make_move(self.promotion_move)
+                        self.update_dead_pieces()
+                        # Reset promotion stuff
+                        self.is_promoting = False
+                        self.promotion_move = None
+                        self.promotion_piece = None
+                        self.promotion_polygons = []
+                        self.orig_promotion_images = []
+                        self.promotion_images = []
+
+                        break
 
         if App.client.last_message:
             if App.client.last_message['type'] == 'game start':
@@ -308,4 +375,15 @@ class Game(State):
                     pygame.draw.polygon(App.window, (255, 255, 255), polygon_pts, width=2)
 
             App.window.blit(self.highlighted_piece.image, self.highlighted_piece.rect)
+
+        if self.is_promoting:
+            for row in range(4):
+                image = self.promotion_images[row]
+                polygon_pts = self.promotion_polygons[row]
+                polygon = shapely.Polygon(polygon_pts)
+                image_center = polygon.centroid.x, polygon.centroid.y
+                rect = image.get_rect(center=image_center)
+
+                pygame.draw.polygon(App.window, (255, 255, 255), polygon_pts)
+                App.window.blit(image, rect)
 

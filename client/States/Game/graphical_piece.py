@@ -77,7 +77,10 @@ class GraphicalPiece:
         else:
             self.image = self.dead_image
 
-        polygon = game.segment_polygons[self.pos.segment][int(self.pos.square.y * 8 + self.pos.square.x)]
+        self.update_pixel_pos(game)
+
+    def update_pixel_pos(self, game):
+        polygon = game.segment_polygons[(self.pos.segment - game.rotation_idx) % 3][int(self.pos.square.y * 8 + self.pos.square.x)]
         polygon = shapely.Polygon(polygon)
         self.rect = self.image.get_rect(center=(polygon.centroid.x, polygon.centroid.y))
         self.ghost_rect = self.rect.copy()
