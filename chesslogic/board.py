@@ -122,6 +122,8 @@ class Board:
             if game_state == 'checkmate':
                 self.checkmated_players.append(turn)
 
+        print(self.checkmated_players, self.stalemated_players)
+
         # Skip turn
         if self.turn in self.stalemated_players or self.turn in self.checkmated_players:
             self.turn_index = (self.turn_index + 1) % len(self.turns)

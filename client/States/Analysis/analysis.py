@@ -55,7 +55,7 @@ class Analysis(State):
         chess_sprite_image = pygame.image.load('../Assets/chess_pieces.png').convert_alpha()
 
         piece_letters = ['k', 'q', 'b', 'n', 'r', 'p']
-        piece_colours = ['w', 'b', 'r']
+        piece_colours = ['w', 'b', 'r', 'd']
         for col, letter in enumerate(piece_letters):
             for row, colour in enumerate(piece_colours):
                 piece_rect = pygame.Rect(col * piece_size, row * piece_size, piece_size, piece_size)

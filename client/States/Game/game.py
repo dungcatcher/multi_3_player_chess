@@ -250,6 +250,7 @@ class Game(State):
                     if App.left_click or drop:  # Make the move
                         self.update_piece_move(self.highlighted_piece, move, drop)
                         self.board.make_move(move)
+                        self.update_dead_pieces()
                         self.highlighted_piece = None
 
     def resize(self, new_size):
@@ -276,6 +277,7 @@ class Game(State):
                         target_piece = piece
                 self.update_piece_move(target_piece, move_obj, is_drop=False, server_move=True)
                 self.board.make_move(move_obj)
+                self.update_dead_pieces()
             App.client.last_message = None
 
         self.draw()

@@ -18,6 +18,8 @@ class GraphicalPiece:
         self.orig_dead_image = dead_image
         self.pos = pos
 
+        self.dead = False
+
         self.image = None
         self.dead_image = None
         self.normal_image = None  # Normal state
@@ -32,8 +34,6 @@ class GraphicalPiece:
         self.is_moving = False
         self.target_pixel_pos = None
         self.slide_amount = 0
-
-        self.dead = False
 
         self.picked_up = False
         self.moves = []
