@@ -99,6 +99,13 @@ class Game(State):
 
         self.move_list = []  # [white, black, red], ...
         self.notation_labels = []
+        # Fix later
+        self.move_list_rect = pygame.Rect(self.move_divider_rect.left, self.colour_heading_rect.bottom,
+                                          self.move_divider_rect.width, self.move_divider_rect.height - (self.move_table_title_rect.height + self.colour_heading_rect.height))
+        self.move_list_surf = pygame.Surface(self.move_list_rect.size, pygame.SRCALPHA, 32).convert_alpha()
+
+        # Clocks
+        self.time_dict = {}
 
     def load_spritesheet(self):
         piece_size = 135
@@ -381,6 +388,8 @@ class Game(State):
                         self.promotion_images = []
                         break
 
+        print(self.time_dict)
+
         if App.client.last_message:
             if App.client.last_message['type'] == 'game start':
                 self.colour = App.client.last_message['data']['colours'][App.client.username]
@@ -388,11 +397,13 @@ class Game(State):
                 print(self.colour, self.rotation_idx)
 
                 self.game_id = App.client.last_message['data']['game id']
+                self.time_dict = App.client.last_message['data']['times']
 
                 self.flip_board()
             if App.client.last_message['type'] == 'move':
                 move_obj = json_to_move_obj(App.client.last_message['data'])
                 target_piece = None
+                print(move_obj)
                 for piece in self.graphical_pieces:
                     if piece.pos == move_obj.start:
                         target_piece = piece
@@ -400,6 +411,10 @@ class Game(State):
                 self.update_piece_move(target_piece, move_obj, is_drop=False, server_move=True)
                 self.board.make_move(move_obj)
                 self.update_dead_pieces()
+
+                self.time_dict = App.client.last_message['data']['times']
+            if App.client.last_message['type'] == 'timer':
+                self.time_dict = App.client.last_message['data']
             App.client.last_message = None
 
         self.draw()
@@ -408,11 +423,11 @@ class Game(State):
         App.window.fill((250, 245, 240))
 
         pygame.draw.rect(App.window, (227, 228, 224), self.move_divider_rect)
-        self.move_table_title_label.draw()
+        self.move_table_title_label.draw(App.window)
         for label in self.colour_heading_labels:
-            label.draw()
+            label.draw(App.window)
         for label in self.notation_labels:
-            label.draw()
+            label.draw(App.window)
 
         App.window.blit(self.board_image, self.board_rect)
 

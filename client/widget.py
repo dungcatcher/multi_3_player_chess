@@ -35,7 +35,7 @@ class Label(Widget):
         self.rect = pygame.Rect(0, 0, width, height)
         setattr(self.rect, anchor, (x, y))  # Position rect
 
-    def draw(self):
+    def draw(self, surf):
         if not self.hidden:
             text_surf, text_rect = self.font.render(self.label, self.text_colour)
             text_rect.center = self.rect.center
@@ -43,7 +43,7 @@ class Label(Widget):
                 pygame.draw.rect(App.window, self.bg_colour, self.rect)
             if self.outline_colour:
                 pygame.draw.rect(App.window, self.outline_colour, self.rect, width=self.border_width)
-            App.window.blit(text_surf, text_rect)
+            surf.blit(text_surf, text_rect)
 
 
 class Button(Widget):

@@ -97,5 +97,5 @@ class Login(State):
         self.password_input.draw()
         self.login_button.draw()
         self.register_button.draw()
-        self.error_label.draw()
+        self.error_label.draw(App.window)
 

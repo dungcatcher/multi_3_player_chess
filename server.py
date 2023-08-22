@@ -3,6 +3,7 @@ import threading
 import json
 import random
 import string
+import time
 from server.game import Game
 from chesslogic.classes import json_to_move_obj
 
@@ -43,10 +44,14 @@ class Server:
         player_colours = {}
         for player_name, data in game.player_data.items():
             player_colours[player_name] = data['colour']
+        server_times = {}
+        for player_name, data in game.player_data.items():
+            server_times[data['colour']] = data['time']
 
         packet = {
             'colours': player_colours,
-            'game id': game_id
+            'game id': game_id,
+            'times': server_times
         }
 
         return packet
@@ -140,6 +145,12 @@ class Server:
         # --------- In game ---------------------
         if response_dict['type'] == 'move':
             game_id = response_dict['data']['game id']
+
+            server_times = {}
+            for username, player in self.games[game_id].player_data.items():
+                server_times[player['colour']] = player['time']
+            response_dict['data']['times'] = server_times  # Use servers values for times instead of clients
+
             move_packet = {
                 'type': 'move',
                 'data': response_dict['data']
@@ -148,9 +159,22 @@ class Server:
                 player_conn = player['socket']
                 if conn != player_conn:  # Don't send back to person who sent the move
                     send_response(player_conn, move_packet)
+                else:
+                    timer_packet = {
+                        'type': 'timer',
+                        'data': server_times
+                    }
+                    send_response(conn, timer_packet)
 
             move_obj = json_to_move_obj(response_dict['data'])
             self.games[game_id].board.make_move(move_obj)
+
+            if not self.games[game_id].start_timer:  # First move of the game
+                self.games[game_id].start_timer = True
+                self.games[game_id].previous_time = time.time()
+            for username, player in self.games[game_id].player_data.items():  # Update user time
+                if player['colour'] == self.games[game_id].board.turn:
+                    self.games[game_id].turn = username
 
     def remove_socket(self, conn):
         conn.close()
@@ -174,7 +198,16 @@ class Server:
                 self.remove_socket(conn)
                 break
 
+    def game_handler(self):
+        while True:
+            for game in self.games.values():
+                if game.started:
+                    game.update()
+
     def loop(self):
+        game_handler_thread = threading.Thread(target=self.game_handler, args=(), daemon=True)
+        game_handler_thread.start()
+
         with self.socket as s:
             s.listen()
             while True:
