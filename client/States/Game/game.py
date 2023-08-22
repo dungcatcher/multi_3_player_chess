@@ -87,7 +87,7 @@ class Game(State):
                                             self.move_table_title_rect.width, self.move_table_title_rect.height,
                                             'Moves', 'center', None, None, (255, 255, 255))
         self.colour_heading_labels = []
-        self.move_indicator_width = 0.05 * self.move_divider_rect.width
+        self.move_indicator_width = 0.1 * self.move_divider_rect.width
         self.colour_heading_rect = pygame.Rect(self.move_table_title_rect.left + self.move_indicator_width,
                                                self.move_table_title_rect.bottom, self.move_divider_rect.width - self.move_indicator_width,
                                                self.move_divider_rect.height * 0.08)
@@ -199,6 +199,7 @@ class Game(State):
 
         if create_new_row:
             self.move_list.append([])
+
         current_row = self.move_list[-1]
         current_row.append(move_notation)
 
@@ -207,13 +208,16 @@ class Game(State):
         move_num = len(self.move_list) - 1
         colour_idx = len(current_row) - 1
 
-        label = Label(self.colour_heading_rect.left + colour_idx * (self.colour_heading_rect.width / 3),
+        notation_label = Label(self.colour_heading_rect.left + colour_idx * (self.colour_heading_rect.width / 3),
                       self.colour_heading_rect.bottom + move_num * (self.move_divider_rect.height * 0.08),
                       self.colour_heading_rect.width / 3, self.move_divider_rect.height * 0.08, move_notation, 'topleft',
                       None, None, (255, 255, 255))
-        self.notation_labels.append(label)
+        self.notation_labels.append(notation_label)
 
-        print(self.move_list)
+        move_num_label = Label(self.move_divider_rect.left, self.colour_heading_rect.bottom + move_num * (self.move_divider_rect.height * 0.08),
+                               self.move_indicator_width, self.move_divider_rect.height * 0.08, str(move_num + 1), 'topleft',
+                               None, None, (255, 255, 255))
+        self.notation_labels.append(move_num_label)
 
     def update_piece_move(self, piece, move, is_drop, server_move=False):  # Give GraphicalPiece that moved, drop:
         polygon = shapely.Polygon(self.segment_polygons[(move.end.segment - self.rotation_idx) % 3]
