@@ -98,6 +98,7 @@ class Game(State):
             self.colour_heading_labels.append(label)
 
         self.move_list = []  # [white, black, red], ...
+        self.notation_labels = []
 
     def load_spritesheet(self):
         piece_size = 135
@@ -200,6 +201,17 @@ class Game(State):
             self.move_list.append([])
         current_row = self.move_list[-1]
         current_row.append(move_notation)
+
+        # Label maker
+
+        move_num = len(self.move_list) - 1
+        colour_idx = len(current_row) - 1
+
+        label = Label(self.colour_heading_rect.left + colour_idx * (self.colour_heading_rect.width / 3),
+                      self.colour_heading_rect.bottom + move_num * (self.move_divider_rect.height * 0.08),
+                      self.colour_heading_rect.width / 3, self.move_divider_rect.height * 0.08, move_notation, 'topleft',
+                      None, None, (255, 255, 255))
+        self.notation_labels.append(label)
 
         print(self.move_list)
 
@@ -394,6 +406,8 @@ class Game(State):
         pygame.draw.rect(App.window, (227, 228, 224), self.move_divider_rect)
         self.move_table_title_label.draw()
         for label in self.colour_heading_labels:
+            label.draw()
+        for label in self.notation_labels:
             label.draw()
 
         App.window.blit(self.board_image, self.board_rect)
