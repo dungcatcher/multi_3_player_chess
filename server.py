@@ -22,7 +22,6 @@ class Server:
         with open('data/users.json') as f:
             self.users = json.load(f)
 
-        self.addresses = {}
         self.in_lobby = []
 
         self.logged_in = {}  # username: socket
@@ -153,13 +152,27 @@ class Server:
             move_obj = json_to_move_obj(response_dict['data'])
             self.games[game_id].board.make_move(move_obj)
 
+    def remove_socket(self, conn):
+        conn.close()
+        # Remove from lobby
+        if conn in self.in_lobby:
+            self.in_lobby.remove(conn)
+        # Remove from logged in
+        for username, user_sock in self.logged_in.items():
+            if conn == user_sock:
+                del self.logged_in[username]
+                break
+
     def client_handler(self, conn, addr):
-        with conn:
-            while True:
+        while True:
+            try:
                 data = conn.recv(1024)
                 if not data:
                     break
                 self.handle_response(conn, addr, data)
+            except ConnectionResetError:
+                self.remove_socket(conn)
+                break
 
     def loop(self):
         with self.socket as s:
@@ -167,7 +180,6 @@ class Server:
             while True:
                 conn, addr = s.accept()
                 print(f'{addr} has connected!')
-                self.addresses[str(addr)] = conn
                 client_thread = threading.Thread(target=self.client_handler, args=(conn, addr), daemon=True)
                 client_thread.start()
 
