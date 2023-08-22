@@ -5,6 +5,7 @@ from client.app import App
 from client.state import State
 from .polygon import gen_polygons, resize_polygons
 from .graphical_piece import GraphicalPiece
+from ...widget import Label
 from chesslogic.classes import Position, json_to_move_obj
 from chesslogic.board import Board
 from chesslogic.movegen import piece_movegen
@@ -81,7 +82,21 @@ class Game(State):
 
         # Move table
         self.move_table_title_rect = pygame.Rect(self.move_divider_rect.left, self.move_divider_rect.top,
-                                                 self.move_divider_rect.width, self.move_divider_rect.height * 0.08)
+                                                 self.move_divider_rect.width, self.move_divider_rect.height * 0.1)
+        self.move_table_title_label = Label(self.move_table_title_rect.centerx, self.move_table_title_rect.centery,
+                                            self.move_table_title_rect.width, self.move_table_title_rect.height,
+                                            'Moves', 'center', None, None, (255, 255, 255))
+        self.colour_heading_labels = []
+        self.move_indicator_width = 0.05 * self.move_divider_rect.width
+        self.colour_heading_rect = pygame.Rect(self.move_table_title_rect.left + self.move_indicator_width,
+                                               self.move_table_title_rect.bottom, self.move_divider_rect.width - self.move_indicator_width,
+                                               self.move_divider_rect.height * 0.08)
+        colours = ['White', 'Black', 'Red']
+        for i, colour in enumerate(colours):
+            label = Label(self.colour_heading_rect.left + i * (self.colour_heading_rect.width / 3), self.colour_heading_rect.top,
+                          self.colour_heading_rect.width / 3, self.colour_heading_rect.height, colour, 'topleft', None, None, (255, 255, 255))
+            self.colour_heading_labels.append(label)
+
         self.move_list = []  # [white, black, red], ...
 
     def load_spritesheet(self):
@@ -170,9 +185,25 @@ class Game(State):
         for piece in self.graphical_pieces:
             piece.update_pixel_pos(self)
 
-    def update_piece_move(self, piece, move, is_drop, server_move=False):  # Give GraphicalPiece that moved, drop:
-        print(get_move_notation(self.board, move))
+    def update_move_table(self, move):
+        move_notation = get_move_notation(self.board, move)
 
+        create_new_row = False
+        if self.move_list:
+            last_move_row = self.move_list[-1]
+            if len(last_move_row) == 3:
+                create_new_row = True
+        else:
+            create_new_row = True
+
+        if create_new_row:
+            self.move_list.append([])
+        current_row = self.move_list[-1]
+        current_row.append(move_notation)
+
+        print(self.move_list)
+
+    def update_piece_move(self, piece, move, is_drop, server_move=False):  # Give GraphicalPiece that moved, drop:
         polygon = shapely.Polygon(self.segment_polygons[(move.end.segment - self.rotation_idx) % 3]
                                   [int(move.end.square.y * 8 + move.end.square.x)])
         end_pixel_pos = polygon.centroid.x, polygon.centroid.y
@@ -280,6 +311,7 @@ class Game(State):
                 if polygon.contains(mouse_pos):
                     if App.left_click or drop:  # Make the move
                         if not move.is_promotion:
+                            self.update_move_table(move)
                             self.update_piece_move(self.highlighted_piece, move, drop)
                             self.board.make_move(move)
                             self.update_dead_pieces()
@@ -303,7 +335,6 @@ class Game(State):
                                 self.promotion_piece = self.highlighted_piece
                         self.highlighted_piece = None
 
-
     def resize(self, new_size):
         self.place_elements()
 
@@ -321,6 +352,7 @@ class Game(State):
                         promo_piece = self.promotion_pieces[i]
                         self.promotion_move.promo_type = promo_piece
 
+                        self.update_move_table(self.promotion_move)
                         self.update_piece_move(self.promotion_piece, self.promotion_move, True)
                         self.board.make_move(self.promotion_move)
                         self.update_dead_pieces()
@@ -344,11 +376,11 @@ class Game(State):
                 self.flip_board()
             if App.client.last_message['type'] == 'move':
                 move_obj = json_to_move_obj(App.client.last_message['data'])
-                print(move_obj.start)
                 target_piece = None
                 for piece in self.graphical_pieces:
                     if piece.pos == move_obj.start:
                         target_piece = piece
+                self.update_move_table(move_obj)
                 self.update_piece_move(target_piece, move_obj, is_drop=False, server_move=True)
                 self.board.make_move(move_obj)
                 self.update_dead_pieces()
@@ -360,6 +392,10 @@ class Game(State):
         App.window.fill((250, 245, 240))
 
         pygame.draw.rect(App.window, (227, 228, 224), self.move_divider_rect)
+        self.move_table_title_label.draw()
+        for label in self.colour_heading_labels:
+            label.draw()
+
         App.window.blit(self.board_image, self.board_rect)
 
         for piece in self.graphical_pieces:
