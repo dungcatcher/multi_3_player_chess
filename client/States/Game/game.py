@@ -10,6 +10,7 @@ from chesslogic.classes import Position, json_to_move_obj
 from chesslogic.board import Board
 from chesslogic.movegen import piece_movegen
 from .move_table import get_move_notation
+from .clock import Clock
 
 # https://websockets.readthedocs.io/en/stable/intro/tutorial1.html
 
@@ -85,7 +86,7 @@ class Game(State):
                                                  self.move_divider_rect.width, self.move_divider_rect.height * 0.1)
         self.move_table_title_label = Label(self.move_table_title_rect.centerx, self.move_table_title_rect.centery,
                                             self.move_table_title_rect.width, self.move_table_title_rect.height,
-                                            'Moves', 'center', None, None, (255, 255, 255))
+                                            'Moves', 'center', None, None, (0, 0, 0))
         self.colour_heading_labels = []
         self.move_indicator_width = 0.1 * self.move_divider_rect.width
         self.colour_heading_rect = pygame.Rect(self.move_table_title_rect.left + self.move_indicator_width,
@@ -94,7 +95,7 @@ class Game(State):
         colours = ['White', 'Black', 'Red']
         for i, colour in enumerate(colours):
             label = Label(self.colour_heading_rect.left + i * (self.colour_heading_rect.width / 3), self.colour_heading_rect.top,
-                          self.colour_heading_rect.width / 3, self.colour_heading_rect.height, colour, 'topleft', None, None, (255, 255, 255))
+                          self.colour_heading_rect.width / 3, self.colour_heading_rect.height, colour, 'topleft', None, None, (0, 0, 0))
             self.colour_heading_labels.append(label)
 
         self.move_list = []  # [white, black, red], ...
@@ -106,6 +107,16 @@ class Game(State):
 
         # Clocks
         self.time_dict = {}
+        self.clocks = {}
+
+        bottom_clock_rect = pygame.Rect(0, 0, 0.3 * self.board_rect.width, CLOCK_HEIGHT - SIDE_PADDING)
+        bottom_clock_rect.midtop = self.board_rect.centerx, self.board_rect.bottom + SIDE_PADDING
+        right_clock_rect = pygame.Rect(0, 0, 0.3 * self.board_rect.width, CLOCK_HEIGHT - SIDE_PADDING)
+        right_clock_rect.bottomleft = self.board_rect.centerx + 0.2 * self.board_rect.width, self.board_rect.top - SIDE_PADDING
+        left_clock_rect = pygame.Rect(0, 0, 0.3 * self.board_rect.width, CLOCK_HEIGHT - SIDE_PADDING)
+        left_clock_rect.bottomright = self.board_rect.centerx - 0.2 * self.board_rect.width, self.board_rect.top - SIDE_PADDING
+
+        self.clock_rects = {'w': bottom_clock_rect, 'b': right_clock_rect, 'r': left_clock_rect}
 
     def load_spritesheet(self):
         piece_size = 135
@@ -152,8 +163,6 @@ class Game(State):
         for piece in self.graphical_pieces:
             piece.gen_image(self)
 
-        self.flip_board()
-
     def generate_pieces(self):
         for segment in range(3):
             for row in range(4):
@@ -193,6 +202,16 @@ class Game(State):
         for piece in self.graphical_pieces:
             piece.update_pixel_pos(self)
 
+        # Update the rects of each
+        flipped_clocks = {}
+        colours = ['w', 'b', 'r']
+        for i, colour in enumerate(colours):
+            new_rect = self.clock_rects[colours[(i - self.rotation_idx) % 3]]
+            flipped_clocks[colour] = self.clocks[colour]
+            flipped_clocks[colour].rect = new_rect
+            flipped_clocks[colour].place_elements()
+        self.clocks = flipped_clocks
+
     def update_move_table(self, move):
         move_notation = get_move_notation(self.board, move)
 
@@ -218,12 +237,12 @@ class Game(State):
         notation_label = Label(self.colour_heading_rect.left + colour_idx * (self.colour_heading_rect.width / 3),
                       self.colour_heading_rect.bottom + move_num * (self.move_divider_rect.height * 0.08),
                       self.colour_heading_rect.width / 3, self.move_divider_rect.height * 0.08, move_notation, 'topleft',
-                      None, None, (255, 255, 255))
+                      None, None, (0, 0, 0))
         self.notation_labels.append(notation_label)
 
         move_num_label = Label(self.move_divider_rect.left, self.colour_heading_rect.bottom + move_num * (self.move_divider_rect.height * 0.08),
                                self.move_indicator_width, self.move_divider_rect.height * 0.08, str(move_num + 1), 'topleft',
-                               None, None, (255, 255, 255))
+                               None, None, (0, 0, 0))
         self.notation_labels.append(move_num_label)
 
     def update_piece_move(self, piece, move, is_drop, server_move=False):  # Give GraphicalPiece that moved, drop:
@@ -334,10 +353,7 @@ class Game(State):
                 if polygon.contains(mouse_pos):
                     if App.left_click or drop:  # Make the move
                         if not move.is_promotion:
-                            self.update_move_table(move)
-                            self.update_piece_move(self.highlighted_piece, move, drop)
-                            self.board.make_move(move)
-                            self.update_dead_pieces()
+                            self.make_move(move, self.highlighted_piece, drop)
                         else:  # User must select what type of promotion
                             self.is_promoting = True
                             self.promotion_move = move
@@ -358,11 +374,28 @@ class Game(State):
                                 self.promotion_piece = self.highlighted_piece
                         self.highlighted_piece = None
 
+    def update_clocks(self):
+        for colour, clock in self.clocks.items():
+            clock.clock_time = self.time_dict[colour]
+            clock.is_ticking = False
+            if self.board.turn == colour:
+                clock.is_ticking = True
+
+    def make_move(self, move, piece, is_drop, server_move=False):
+        self.update_move_table(move)
+        self.update_piece_move(piece, move, is_drop=is_drop, server_move=server_move)
+        self.board.make_move(move)
+        self.update_dead_pieces()
+        self.update_clocks()
+        print(self.time_dict)
+
     def resize(self, new_size):
         self.place_elements()
 
     def update(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()
+        for clock in self.clocks.values():
+            clock.update()
 
         if not self.is_promoting:
             self.handle_drag_and_drop()
@@ -374,11 +407,7 @@ class Game(State):
                     if polygon.contains(mouse_point):
                         promo_piece = self.promotion_pieces[i]
                         self.promotion_move.promo_type = promo_piece
-
-                        self.update_move_table(self.promotion_move)
-                        self.update_piece_move(self.promotion_piece, self.promotion_move, True)
-                        self.board.make_move(self.promotion_move)
-                        self.update_dead_pieces()
+                        self.make_move(self.promotion_move, self.promotion_piece, True)
                         # Reset promotion stuff
                         self.is_promoting = False
                         self.promotion_move = None
@@ -387,8 +416,6 @@ class Game(State):
                         self.orig_promotion_images = []
                         self.promotion_images = []
                         break
-
-        print(self.time_dict)
 
         if App.client.last_message:
             if App.client.last_message['type'] == 'game start':
@@ -399,22 +426,26 @@ class Game(State):
                 self.game_id = App.client.last_message['data']['game id']
                 self.time_dict = App.client.last_message['data']['times']
 
+                for colour, rect in self.clock_rects.items():
+                    new_clock = Clock(rect, list(self.time_dict.values())[0])
+                    self.clocks[colour] = new_clock
+
                 self.flip_board()
             if App.client.last_message['type'] == 'move':
                 move_obj = json_to_move_obj(App.client.last_message['data'])
                 target_piece = None
-                print(move_obj)
                 for piece in self.graphical_pieces:
                     if piece.pos == move_obj.start:
                         target_piece = piece
-                self.update_move_table(move_obj)
-                self.update_piece_move(target_piece, move_obj, is_drop=False, server_move=True)
-                self.board.make_move(move_obj)
-                self.update_dead_pieces()
 
                 self.time_dict = App.client.last_message['data']['times']
+                for colour, clock in self.clocks.items():
+                    clock.clock_time = self.time_dict[colour]
+                self.make_move(move_obj, target_piece, False, server_move=True)
+
             if App.client.last_message['type'] == 'timer':
                 self.time_dict = App.client.last_message['data']
+                self.update_clocks()
             App.client.last_message = None
 
         self.draw()
@@ -428,6 +459,9 @@ class Game(State):
             label.draw(App.window)
         for label in self.notation_labels:
             label.draw(App.window)
+
+        for clock in self.clocks.values():
+            clock.draw()
 
         App.window.blit(self.board_image, self.board_rect)
 

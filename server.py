@@ -101,19 +101,22 @@ class Server:
         # ----- Queue -----
         if response_dict['type'] == 'queue':
             username = self.get_username(conn)
+            already_in_game = False
+            # Not already in a game
+            for game in self.games.values():
+                for player in game.player_data.values():
+                    if conn == player['socket']:
+                        already_in_game = True
             if response_dict['data'] == 'new':  # New game created
-                game_id = ''.join(random.choice(string.digits + string.ascii_letters) for _ in range(10))  # Random game id
-                new_game = Game()
-                new_game.add_player(username, conn)
-                self.games[game_id] = new_game
+                if not already_in_game:
+                    game_id = ''.join(random.choice(string.digits + string.ascii_letters) for _ in range(10))  # Random game id
+                    new_game = Game()
+                    new_game.add_player(username, conn)
+                    self.games[game_id] = new_game
+
             elif response_dict['data'] != 'init':  # Joined existing game
                 target_game_id = response_dict['data']
                 if not self.games[target_game_id].started:
-                    already_in_game = False
-                    # Not already in a game
-                    for game in self.games.values():
-                        if conn in game.player_data:
-                            already_in_game = True
                     if not already_in_game:
                         self.games[target_game_id].add_player(username, conn)
                         # Check to see if the game has started
