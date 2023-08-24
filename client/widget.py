@@ -38,7 +38,12 @@ class Label(Widget):
     def draw(self, surf):
         if not self.hidden:
             text_surf, text_rect = self.font.render(self.label, self.text_colour)
-            text_rect.center = self.rect.center
+            if self.align == 'left':
+                text_rect.midleft = self.rect.left + self.padding, self.rect.centery
+            if self.align == 'center':
+                text_rect.center = self.rect.center
+            if self.align == 'right':
+                text_rect.midright = self.rect.right - self.padding, self.rect.centery
             if self.bg_colour:
                 pygame.draw.rect(App.window, self.bg_colour, self.rect)
             if self.outline_colour:
