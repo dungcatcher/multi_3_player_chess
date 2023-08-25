@@ -61,9 +61,9 @@ class Board:
         self.turns = ["w", "b", "r"]
         self.turn_index = 0
         self.turn = self.turns[self.turn_index]
-        self.winner = None
         self.stalemated_players = []
         self.checkmated_players = []
+        self.disconnected_players = []
         self.castling_rights = {
             'w': {'kingside': True, 'queenside': True},
             'b': {'kingside': True, 'queenside': True},
@@ -72,6 +72,12 @@ class Board:
         self.enpassant_squares = {  # Squares that can be taken en passant
             'w': None, 'b': None, 'r': None
         }
+
+        self.skipped_turn = None
+
+        self.terminated = False
+        self.results = {'w': 0, 'b': 0, 'r': 0}
+        self.termination_type = None
 
     def index_position(self, position):  # Helper function to prevent long indexing code
         return self.position[int(position.segment)][int(position.square.y)][int(position.square.x)]
@@ -88,6 +94,54 @@ class Board:
         queenside_rook_square = self.index_position(Position(colour_to_segment[piece_colour], (0, 3)))
         if queenside_rook_square is None or queenside_rook_square != f'{piece_colour}r':
             self.castling_rights[piece_colour]["queenside"] = False
+
+    def check_winner(self):
+        # Check if the next player is in checkmate or stalemate
+        latest_result = None
+
+        self.stalemated_players = []
+        for turn in self.turns:
+            if turn not in self.disconnected_players or turn not in self.checkmated_players:
+                game_state = get_game_state(self, turn)
+                if game_state == 'stalemate':
+                    latest_result = 'stalemate'
+                    self.stalemated_players.append(turn)
+                if game_state == 'checkmate':
+                    latest_result = 'checkmate'
+                    self.checkmated_players.append(turn)
+
+        if latest_result == 'checkmate':
+            if len(self.checkmated_players + self.disconnected_players) == 2:
+                self.terminated = True
+                for turn in self.turns:
+                    if turn not in self.checkmated_players + self.disconnected_players:
+                        self.results[turn] = 1
+                        self.termination_type = 'checkmate'
+        if latest_result == 'stalemate':
+            if len(self.checkmated_players + self.disconnected_players + self.stalemated_players) == 2:
+                self.terminated = True
+                for turn in self.turns:
+                    if turn not in self.checkmated_players + self.disconnected_players:
+                        self.results[turn] = 0.5
+                        self.termination_type = 'stalemate'
+        if len(self.disconnected_players) == 2:
+            self.terminated = True
+            for turn in self.turns:
+                if turn not in self.disconnected_players:
+                    self.results[turn] = 1
+                    self.termination_type = 'abandoned'
+        # if len(self.checkmated_players) == 2:  # Both other players are in checkmate
+        #     self.terminated = True
+        #     for turn in self.turns:
+        #         if turn not in self.checkmated_players:
+        #             self.results[turn] = 1  # Winner is the person not in checkmate
+        #             self.termination_type = 'checkmate'
+        # if len(self.checkmated_players + self.stalemated_players) == 2:  # Other player is in stalemate -> draw
+        #     self.terminated = True
+        #     for turn in self.turns:
+        #         if turn not in self.checkmated_players:
+        #             self.results[turn] = 0.5
+        #             self.termination_type = 'stalemate'
 
     def make_move(self, move):
         move_colour = self.index_position(move.start)[0]
@@ -107,21 +161,13 @@ class Board:
         Skip turn if they are in checkmate or stalemate
         """
 
-        # Check if the next player is in checkmate or stalemate
-        self.stalemated_players = []
-        for turn in self.turns:
-            game_state = get_game_state(self, turn)
-            if game_state == 'stalemate':
-                self.stalemated_players.append(turn)
-            if turn not in self.checkmated_players:  # Checkmated players can't be taken out of check
-                if game_state == 'checkmate':
-                    self.checkmated_players.append(turn)
+        self.check_winner()
 
-        if len(self.checkmated_players) == 2:
-            self.winner = self.turn
-            print(self.winner)
-
+        self.skipped_turn = None
         # Skip turn
-        if self.turn in self.stalemated_players or self.turn in self.checkmated_players:
+        skip_turn = self.stalemated_players + self.checkmated_players + self.disconnected_players
+        if self.turn in skip_turn:
+            self.skipped_turn = self.turn
+
             self.turn_index = (self.turn_index + 1) % len(self.turns)
             self.turn = self.turns[self.turn_index]

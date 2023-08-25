@@ -62,6 +62,10 @@ class Game(State):
         self.rotation_idx = 0  # 0: white, 1: black: 2: red
         self.game_id = None
 
+        self.terminated = False
+        self.termination_type = None
+        self.results = None
+
         # ------------------------------------
 
         self.orig_segment_polygons = gen_polygons()
@@ -117,6 +121,12 @@ class Game(State):
         left_clock_rect.bottomright = self.board_rect.centerx - 0.2 * self.board_rect.width, self.board_rect.top - SIDE_PADDING
 
         self.clock_rects = {'w': bottom_clock_rect, 'b': right_clock_rect, 'r': left_clock_rect}
+
+        # Termination screen
+        self.termination_rect = pygame.Rect(0, 0, self.playing_divider_rect.width * 0.7, self.playing_divider_rect.height * 0.7)
+        self.termination_rect.center = self.playing_divider_rect.center
+        self.termination_label = Label(self.termination_rect.centerx, self.termination_rect.centery, self.termination_rect.width,
+                                       self.termination_rect.height * 0.2, '', 'center', None, None, (0, 0, 0), align='center')
 
     def load_spritesheet(self):
         piece_size = 135
@@ -176,7 +186,7 @@ class Game(State):
                         self.graphical_pieces.append(new_piece)
 
     def update_dead_pieces(self):
-        dead_pieces = self.board.checkmated_players + self.board.stalemated_players
+        dead_pieces = self.board.checkmated_players + self.board.stalemated_players + self.board.disconnected_players
         for piece in self.graphical_pieces:
             if piece.piece_id[0] in dead_pieces:
                 piece.dead = True
@@ -213,7 +223,10 @@ class Game(State):
         self.clocks = flipped_clocks
 
     def update_move_table(self, move):
-        move_notation = get_move_notation(self.board, move)
+        if move:
+            move_notation = get_move_notation(self.board, move)
+        else:
+            move_notation = '-'
 
         create_new_row = False
         if self.move_list:
@@ -376,15 +389,18 @@ class Game(State):
 
     def update_clocks(self):
         for colour, clock in self.clocks.items():
-            clock.clock_time = self.time_dict[colour]
-            clock.is_ticking = False
-            if self.board.turn == colour:
-                clock.is_ticking = True
+            if colour in self.time_dict.keys():
+                clock.clock_time = self.time_dict[colour]
+                clock.is_ticking = False
+                if self.board.turn == colour:
+                    clock.is_ticking = True
 
     def make_move(self, move, piece, is_drop, server_move=False):
         self.update_move_table(move)
         self.update_piece_move(piece, move, is_drop=is_drop, server_move=server_move)
         self.board.make_move(move)
+        if self.board.skipped_turn:
+            self.update_move_table(None)
         self.update_dead_pieces()
         self.update_clocks()
         print(self.time_dict)
@@ -393,29 +409,32 @@ class Game(State):
         self.place_elements()
 
     def update(self):
-        mouse_x, mouse_y = pygame.mouse.get_pos()
-        for clock in self.clocks.values():
-            clock.update()
+        if not self.terminated:
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            for clock in self.clocks.values():
+                clock.update()
 
-        if not self.is_promoting:
-            self.handle_drag_and_drop()
+            if not self.is_promoting:
+                self.handle_drag_and_drop()
+            else:
+                mouse_point = shapely.Point((mouse_x, mouse_y))
+                for i, polygon_pts in enumerate(self.promotion_polygons):
+                    polygon = shapely.Polygon(polygon_pts)
+                    if App.left_click:
+                        if polygon.contains(mouse_point):
+                            promo_piece = self.promotion_pieces[i]
+                            self.promotion_move.promo_type = promo_piece
+                            self.make_move(self.promotion_move, self.promotion_piece, True)
+                            # Reset promotion stuff
+                            self.is_promoting = False
+                            self.promotion_move = None
+                            self.promotion_piece = None
+                            self.promotion_polygons = []
+                            self.orig_promotion_images = []
+                            self.promotion_images = []
+                            break
         else:
-            mouse_point = shapely.Point((mouse_x, mouse_y))
-            for i, polygon_pts in enumerate(self.promotion_polygons):
-                polygon = shapely.Polygon(polygon_pts)
-                if App.left_click:
-                    if polygon.contains(mouse_point):
-                        promo_piece = self.promotion_pieces[i]
-                        self.promotion_move.promo_type = promo_piece
-                        self.make_move(self.promotion_move, self.promotion_piece, True)
-                        # Reset promotion stuff
-                        self.is_promoting = False
-                        self.promotion_move = None
-                        self.promotion_piece = None
-                        self.promotion_polygons = []
-                        self.orig_promotion_images = []
-                        self.promotion_images = []
-                        break
+            pass
 
         if App.client.last_message:
             if App.client.last_message['type'] == 'game start':
@@ -439,13 +458,30 @@ class Game(State):
                         target_piece = piece
 
                 self.time_dict = App.client.last_message['data']['times']
-                for colour, clock in self.clocks.items():
-                    clock.clock_time = self.time_dict[colour]
+                self.update_clocks()
                 self.make_move(move_obj, target_piece, False, server_move=True)
 
             if App.client.last_message['type'] == 'timer':
                 self.time_dict = App.client.last_message['data']
                 self.update_clocks()
+
+            if App.client.last_message['type'] == 'disconnect':
+                self.update_move_table(None)
+
+                self.board.turn_index = App.client.last_message['data']['turn index']
+                self.board.turn = self.board.turns[self.board.turn_index]
+                self.board.stalemated_players = App.client.last_message['data']['stalemated']
+                self.board.disconnected_players = App.client.last_message['data']['disconnected']
+
+                self.update_dead_pieces()
+                self.update_clocks()
+
+            if App.client.last_message['type'] == 'termination':
+                self.terminated = True
+                self.termination_type = App.client.last_message['data']['termination type']
+                self.results = App.client.last_message['data']['results']
+
+                print(App.client.last_message['data'])
             App.client.last_message = None
 
         self.draw()
@@ -497,3 +533,6 @@ class Game(State):
                 pygame.draw.polygon(App.window, (255, 255, 255), polygon_pts)
                 App.window.blit(image, rect)
 
+        if self.terminated:
+            pygame.draw.rect(App.window, (227, 228, 224), self.termination_rect)
+            self.termination_label.draw(App.window)

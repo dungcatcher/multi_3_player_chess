@@ -63,17 +63,24 @@ class Login(State):
                 self.done = True
                 self.next = 'register'
             if self.login_button.hovered:
-                login_data = {
-                    'username': self.username_input.text,
-                    'password': self.password_input.text
-                }
-                json_packet = json.dumps(login_data)
-                packet_data = {
-                    'type': 'login',
-                    'data': json_packet
-                }
-                packet_json = json.dumps(packet_data)
-                App.client.send_packet(packet_json)
+                if App.client.connected:
+                    login_data = {
+                        'username': self.username_input.text,
+                        'password': self.password_input.text
+                    }
+                    json_packet = json.dumps(login_data)
+                    packet_data = {
+                        'type': 'login',
+                        'data': json_packet
+                    }
+                    packet_json = json.dumps(packet_data)
+                    App.client.send_packet(packet_json)
+                else:
+                    self.error_label.hidden = False
+                    self.error_label.label = 'Could not connect to server'
+                    self.error_label.bg_colour = (255, 170, 170)
+                    self.error_label.outline_colour = (241, 128, 126)
+                    self.error_label.text_colour = (241, 128, 126)
 
             if self.username_input.hovered:
                 self.username_input.selected = True

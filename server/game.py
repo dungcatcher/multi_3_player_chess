@@ -22,7 +22,8 @@ class Game:
     def update(self):
         if self.start_timer:
             delta_time = time.time() - self.previous_time
-            self.player_data[self.turn]['time'] -= delta_time
+            if self.turn in self.player_data.keys():  # Just in case
+                self.player_data[self.turn]['time'] -= delta_time
             self.previous_time = time.time()
 
     def add_player(self, username, conn):
@@ -37,3 +38,4 @@ class Game:
 
         if len(self.player_data.keys()) == 3:
             self.started = True
+

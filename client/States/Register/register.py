@@ -45,24 +45,31 @@ class Register(State):
             self.password_confirmation_input.selected = False
 
             if self.register_button.hovered:
-                if self.password_input.text == self.password_confirmation_input.text:
-                    register_data = {
-                        'username': self.username_input.text,
-                        'password': self.password_input.text
-                    }
-                    json_packet = json.dumps(register_data)
-                    packet_data = {
-                        'type': 'register',
-                        'data': json_packet
-                    }
-                    packet_json = json.dumps(packet_data)
-                    App.client.send_packet(packet_json)
+                if App.client.connected:
+                    if self.password_input.text == self.password_confirmation_input.text:
+                        register_data = {
+                            'username': self.username_input.text,
+                            'password': self.password_input.text
+                        }
+                        json_packet = json.dumps(register_data)
+                        packet_data = {
+                            'type': 'register',
+                            'data': json_packet
+                        }
+                        packet_json = json.dumps(packet_data)
+                        App.client.send_packet(packet_json)
+                    else:
+                        self.error_label.hidden = False
+                        self.error_label.bg_colour = (255, 170, 170)
+                        self.error_label.outline_colour = (241, 128, 126)
+                        self.error_label.text_colour = (241, 128, 126)
+                        self.error_label.label = 'Passwords do not match'
                 else:
                     self.error_label.hidden = False
+                    self.error_label.label = 'Could not connect to server'
                     self.error_label.bg_colour = (255, 170, 170)
                     self.error_label.outline_colour = (241, 128, 126)
                     self.error_label.text_colour = (241, 128, 126)
-                    self.error_label.label = 'Passwords do not match'
 
             if self.username_input.hovered:
                 self.username_input.selected = True
@@ -99,7 +106,7 @@ class Register(State):
         self.password_input.draw()
         self.password_confirmation_input.draw()
         self.register_button.draw()
-        self.error_label.draw()
+        self.error_label.draw(App.window)
         self.back_button.draw()
 
     def reset(self):

@@ -172,6 +172,19 @@ class Server:
             move_obj = json_to_move_obj(response_dict['data'])
             self.games[game_id].board.make_move(move_obj)
 
+            self.games[game_id].board.check_winner()
+            if self.games[game_id].board.terminated:  # Game over
+                termination_data = {
+                    'termination type': self.games[game_id].board.termination_type,
+                    'results': self.games[game_id].board.results
+                }
+                termination_packet = {
+                    'type': 'termination',
+                    'data': termination_data
+                }
+                for username, data in self.games[game_id].player_data().items():
+                    send_response(data['socket'], termination_packet)
+
             if not self.games[game_id].start_timer:  # First move of the game
                 self.games[game_id].start_timer = True
                 self.games[game_id].previous_time = time.time()
@@ -180,7 +193,6 @@ class Server:
                     self.games[game_id].turn = username
 
     def remove_socket(self, conn):
-        conn.close()
         # Remove from lobby
         if conn in self.in_lobby:
             self.in_lobby.remove(conn)
@@ -189,6 +201,74 @@ class Server:
             if conn == user_sock:
                 del self.logged_in[username]
                 break
+        # Remove from game
+        for game in self.games.values():
+            for username, data in game.player_data.items():
+                if conn == data['socket']:  # Player is in game, handle closing
+                    if not game.started:
+                        del game.player_data[username]
+
+                        # Send updated queue data to all users
+                        game_json_list = [self.gen_lobby_game_packet_data(game_id) for game_id in self.games.keys()]
+                        game_packet = {
+                            'type': 'queue',
+                            'data': game_json_list
+                        }
+                        # Update all users in lobby
+                        for user_conn in self.in_lobby:
+                            send_response(user_conn, game_packet)
+
+                        break
+                    else:  # Game has started
+                        player_colour = game.player_data[username]['colour']
+                        game.board.disconnected_players.append(player_colour)
+                        if player_colour in game.board.stalemated_players:
+                            game.board.stalemated_players.remove(player_colour)
+
+                        game.board.check_winner()
+                        if game.board.terminated:  # Leaving resulted in someone winning
+                            game.board.termination_type = 'abandoned'
+
+                            termination_data = {
+                                'termination type': game.board.termination_type,
+                                'results': game.board.results
+                            }
+                            termination_packet = {
+                                'type': 'termination',
+                                'data': termination_data
+                            }
+
+                            for term_username, term_data in game.player_data.items():
+                                if term_data['colour'] != player_colour:
+                                    send_response(term_data['socket'], termination_packet)
+
+                        # Skip the players turn if it is their turn
+                        if game.board.turn == player_colour:
+                            game.board.turn_index = (game.board.turn_index + 1) % len(game.board.turns)
+                            game.board.turn = game.board.turns[game.board.turn_index]
+
+                            for turn_username, turn_data in game.player_data.items():
+                                if turn_data['colour'] == game.board.turn:
+                                    game.turn = turn_username
+
+                        del game.player_data[username]  # Delete from player list
+
+                        # Send disconnection packet to all clients
+                        disconnect_data = {
+                            'turn index': game.board.turn_index,
+                            'stalemated': game.board.stalemated_players,
+                            'disconnected': game.board.disconnected_players,
+                        }
+                        disconnect_packet = {
+                            'type': 'disconnect',
+                            'data': disconnect_data
+                        }
+                        for other_usernames, user_data in game.player_data.items():
+                            send_response(user_data['socket'], disconnect_packet)
+
+                        break
+
+        conn.close()
 
     def client_handler(self, conn, addr):
         while True:
