@@ -2,7 +2,7 @@ import socket
 import threading
 import json
 
-HOST = "localhost"
+HOST = "oggyp.com"
 PORT = 65432
 
 
