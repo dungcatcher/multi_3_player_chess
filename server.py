@@ -42,6 +42,7 @@ class Server:
     def gen_game_packet_data(self, game_id):
         game = self.games[game_id]
         player_colours = {}
+        print(game.player_data)
         for player_name, data in game.player_data.items():
             player_colours[player_name] = data['colour']
         server_times = {}
@@ -182,7 +183,7 @@ class Server:
                     'type': 'termination',
                     'data': termination_data
                 }
-                for username, data in self.games[game_id].player_data().items():
+                for username, data in self.games[game_id].player_data.items():
                     send_response(data['socket'], termination_packet)
 
             if not self.games[game_id].start_timer:  # First move of the game
@@ -205,7 +206,9 @@ class Server:
         for game in self.games.values():
             for username, data in game.player_data.items():
                 if conn == data['socket']:  # Player is in game, handle closing
+                    player_colour = game.player_data[username]['colour']
                     if not game.started:
+                        game.available_colours.append(player_colour)
                         del game.player_data[username]
 
                         # Send updated queue data to all users
@@ -220,7 +223,6 @@ class Server:
 
                         break
                     else:  # Game has started
-                        player_colour = game.player_data[username]['colour']
                         game.board.disconnected_players.append(player_colour)
                         if player_colour in game.board.stalemated_players:
                             game.board.stalemated_players.remove(player_colour)
