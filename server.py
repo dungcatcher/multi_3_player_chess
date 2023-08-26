@@ -1,9 +1,11 @@
+import atexit
 import socket
 import threading
 import json
 import random
 import string
 import time
+import atexit
 from server.game import Game
 from chesslogic.classes import json_to_move_obj
 
@@ -19,15 +21,19 @@ def send_response(conn, response):
 class Server:
     def __init__(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((HOST, PORT))
+
+        self.shutdown_flag = threading.Event()
+
         with open('data/users.json') as f:
             self.users = json.load(f)
 
         self.in_lobby = []
-
         self.logged_in = {}  # username: socket
-
         self.games = {}
+
+        self.thread_lock = threading.Lock()
 
     # Viewing games going on in the lobby
     def gen_lobby_game_packet_data(self, game_id):
@@ -37,6 +43,20 @@ class Server:
             'players': player_names
         }
         return data
+
+    def update_lobby(self):
+        game_json_list = []
+        for game_id, game in self.games.items():
+            if not game.started:
+                game_json_list.append(self.gen_lobby_game_packet_data(game_id))
+
+        game_packet = {
+            'type': 'queue',
+            'data': game_json_list
+        }
+        # Update all users in lobby
+        for user_conn in self.in_lobby:
+            send_response(user_conn, game_packet)
 
     # Actual game
     def gen_game_packet_data(self, game_id):
@@ -131,20 +151,24 @@ class Server:
                                 send_response(player_conn, response_packet)
                                 self.in_lobby.remove(player_conn)
                     else:
-                        print('Already in game')
+                        player_colour = self.games[target_game_id].player_data[username]['colour']
+
+                        self.games[target_game_id].available_colours.append(player_colour)
+                        del self.games[target_game_id].player_data[username]
+
+                        self.thread_lock.acquire()
+                        if not self.games[target_game_id].player_data:
+                            del self.games[target_game_id]
+                        self.thread_lock.release()
+
+                        # Send updated queue data to all users
+                        self.update_lobby()
                 else:
                     print('Game is full')
             elif response_dict['data'] == 'init':
                 self.in_lobby.append(conn)
             # Includes init
-            game_json_list = [self.gen_lobby_game_packet_data(game_id) for game_id in self.games.keys()]
-            game_packet = {
-                'type': 'queue',
-                'data': game_json_list
-            }
-            # Update all users in lobby
-            for user_conn in self.in_lobby:
-                send_response(user_conn, game_packet)
+            self.update_lobby()
 
         # --------- In game ---------------------
         if response_dict['type'] == 'move':
@@ -186,6 +210,12 @@ class Server:
                 for username, data in self.games[game_id].player_data.items():
                     send_response(data['socket'], termination_packet)
 
+                self.thread_lock.acquire()
+                del self.games[game_id]
+                self.thread_lock.release()
+
+                self.update_lobby()
+
             if not self.games[game_id].start_timer:  # First move of the game
                 self.games[game_id].start_timer = True
                 self.games[game_id].previous_time = time.time()
@@ -203,23 +233,21 @@ class Server:
                 del self.logged_in[username]
                 break
         # Remove from game
-        for game in self.games.values():
+        for game_id, game in self.games.items():
             for username, data in game.player_data.items():
                 if conn == data['socket']:  # Player is in game, handle closing
                     player_colour = game.player_data[username]['colour']
                     if not game.started:
+                        self.thread_lock.acquire()
                         game.available_colours.append(player_colour)
                         del game.player_data[username]
 
+                        if not game.player_data:
+                            del self.games[game_id]
+                        self.thread_lock.release()
+
                         # Send updated queue data to all users
-                        game_json_list = [self.gen_lobby_game_packet_data(game_id) for game_id in self.games.keys()]
-                        game_packet = {
-                            'type': 'queue',
-                            'data': game_json_list
-                        }
-                        # Update all users in lobby
-                        for user_conn in self.in_lobby:
-                            send_response(user_conn, game_packet)
+                        self.update_lobby()
 
                         break
                     else:  # Game has started
@@ -285,21 +313,28 @@ class Server:
 
     def game_handler(self):
         while True:
+            self.thread_lock.acquire()
             for game in self.games.values():
                 if game.started:
                     game.update()
+            self.thread_lock.release()
 
     def loop(self):
-        game_handler_thread = threading.Thread(target=self.game_handler, args=(), daemon=True)
+        game_handler_thread = threading.Thread(target=self.game_handler, args=())
+        game_handler_thread.daemon = True
         game_handler_thread.start()
 
         with self.socket as s:
             s.listen()
-            while True:
-                conn, addr = s.accept()
-                print(f'{addr} has connected!')
-                client_thread = threading.Thread(target=self.client_handler, args=(conn, addr), daemon=True)
-                client_thread.start()
+            try:
+                while True:
+                    conn, addr = s.accept()
+                    print(f'{addr} has connected!')
+                    client_thread = threading.Thread(target=self.client_handler, args=(conn, addr), daemon=True)
+                    client_thread.daemon = True
+                    client_thread.start()
+            except KeyboardInterrupt:
+                print('hi')
 
 
 server = Server()

@@ -5,7 +5,7 @@ from client.app import App
 from client.state import State
 from .polygon import gen_polygons, resize_polygons
 from .graphical_piece import GraphicalPiece
-from ...widget import Label
+from ...widget import Label, Button
 from chesslogic.classes import Position, json_to_move_obj
 from chesslogic.board import Board
 from chesslogic.movegen import piece_movegen
@@ -127,6 +127,8 @@ class Game(State):
         self.termination_rect.center = self.playing_divider_rect.center
         self.termination_label = Label(self.termination_rect.centerx, self.termination_rect.centery, self.termination_rect.width,
                                        self.termination_rect.height * 0.2, '', 'center', None, None, (0, 0, 0), align='center')
+        self.back_button = Button(self.termination_rect.centerx, self.termination_rect.bottom - self.termination_rect.height * 0.1,
+                                  self.termination_rect.width * 0.5, self.termination_rect.height * 0.1, 'Back to Lobby', 'midbottom', align='center')
 
     def load_spritesheet(self):
         piece_size = 135
@@ -434,7 +436,20 @@ class Game(State):
                             self.promotion_images = []
                             break
         else:
-            pass
+            self.back_button.update()
+
+            if App.left_click:
+                if self.back_button.hovered:
+                    self.done = True
+                    self.next = 'lobby'
+
+                    # Request queue data
+                    request_data = {
+                        'type': 'queue',
+                        'data': 'init'
+                    }
+                    request_packet = json.dumps(request_data)
+                    App.client.send_packet(request_packet)
 
         if App.client.last_message:
             if App.client.last_message['type'] == 'game start':
@@ -480,6 +495,7 @@ class Game(State):
                 self.terminated = True
                 self.termination_type = App.client.last_message['data']['termination type']
                 self.results = App.client.last_message['data']['results']
+                self.termination_label.label = self.termination_type
 
                 print(App.client.last_message['data'])
             App.client.last_message = None
@@ -536,3 +552,4 @@ class Game(State):
         if self.terminated:
             pygame.draw.rect(App.window, (227, 228, 224), self.termination_rect)
             self.termination_label.draw(App.window)
+            self.back_button.draw()

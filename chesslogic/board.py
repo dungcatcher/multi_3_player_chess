@@ -101,7 +101,7 @@ class Board:
 
         self.stalemated_players = []
         for turn in self.turns:
-            if turn not in self.disconnected_players or turn not in self.checkmated_players:
+            if turn not in self.disconnected_players and turn not in self.checkmated_players:
                 game_state = get_game_state(self, turn)
                 if game_state == 'stalemate':
                     latest_result = 'stalemate'
@@ -111,6 +111,7 @@ class Board:
                     self.checkmated_players.append(turn)
 
         if latest_result == 'checkmate':
+            print(self.checkmated_players, self.disconnected_players)
             if len(self.checkmated_players + self.disconnected_players) == 2:
                 self.terminated = True
                 for turn in self.turns:

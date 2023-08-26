@@ -14,9 +14,9 @@ class Login(State):
         self.subtitle_label = Label(self.title_rect.left, self.title_rect.bottom, self.title_rect.width, self.title_rect.height * 0.3,
                                     'by dungcatcher', 'bottomleft', None, None, (50, 50, 50), align='left')
 
-        self.spacing = 0.1 * App.window.get_height()
+        self.spacing = 0.08 * App.window.get_height()
 
-        self.main_div_rect = pygame.Rect(0, self.title_rect.bottom, App.window.get_width(), App.window.get_height() * 0.8)
+        self.main_div_rect = pygame.Rect(0, self.title_rect.bottom + self.spacing, App.window.get_width(), App.window.get_height() * 0.8)
         self.online_div_rect = pygame.Rect(0, self.main_div_rect.top, self.main_div_rect.width * 2/3, self.main_div_rect.height)
         self.offline_div_rect = pygame.Rect(self.online_div_rect.right, self.main_div_rect.top, self.main_div_rect.width * 1/3, self.main_div_rect.height)
 
@@ -26,10 +26,10 @@ class Login(State):
                                       self.spacing, 'midtop', 'Username', align='left', hide_text=False)
         self.password_input = TextBox(self.online_div_rect.centerx, self.online_div_rect.top + self.spacing * 3, 0.5 * self.online_div_rect.width,
                                       self.spacing, 'midtop', 'Password', align='left', hide_text=True)
-        self.login_button = Button(self.online_div_rect.centerx, self.offline_div_rect.top + self.spacing * 5, 0.3 * self.online_div_rect.width,
+        self.login_button = Button(self.online_div_rect.centerx, self.online_div_rect.top + self.spacing * 5, 0.3 * self.online_div_rect.width,
                                    self.spacing, 'Login', 'midtop', align='center')
         self.register_button = Button(self.online_div_rect.centerx, self.online_div_rect.top + self.spacing * 6.5, 0.15 * self.online_div_rect.width,
-                                      self.spacing * 0.5, 'or Register', 'midtop', align='center')
+                                      self.spacing * 0.75, 'or Register', 'midtop', align='center')
 
         self.offline_label = Label(self.offline_div_rect.centerx, self.offline_div_rect.top, 0.3 * self.online_div_rect.width,
                                   self.spacing, 'OFFLINE', 'midtop', None, None, (0, 0, 0), align='center')
@@ -105,7 +105,15 @@ class Login(State):
                     App.client.logged_in = True
                     App.client.username = self.username_input.text
                     self.done = True
-                    self.next = 'menu'
+                    self.next = 'lobby'
+
+                    # Request queue data
+                    request_data = {
+                        'type': 'queue',
+                        'data': 'init'
+                    }
+                    request_packet = json.dumps(request_data)
+                    App.client.send_packet(request_packet)
                 App.client.last_message = None
 
         self.draw()
