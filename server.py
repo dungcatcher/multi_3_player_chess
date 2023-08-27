@@ -233,6 +233,7 @@ class Server:
                 del self.logged_in[username]
                 break
         # Remove from game
+        continue_looping = True
         for game_id, game in self.games.items():
             for username, data in game.player_data.items():
                 if conn == data['socket']:  # Player is in game, handle closing
@@ -244,6 +245,7 @@ class Server:
 
                         if not game.player_data:
                             del self.games[game_id]
+                            continue_looping = False  # Break out of nested loop
                         self.thread_lock.release()
 
                         # Send updated queue data to all users
@@ -297,6 +299,8 @@ class Server:
                             send_response(user_data['socket'], disconnect_packet)
 
                         break
+            if not continue_looping:
+                break
 
         conn.close()
 
