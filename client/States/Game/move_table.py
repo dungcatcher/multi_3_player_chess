@@ -34,6 +34,8 @@ def get_move_notation(board, move):
     if piece_id[1] != 'p':
         notation += piece_id[1].upper()
     if capture:
+        if piece_id[1] == 'p':
+            notation += COORDINATE_TABLE[move.start.segment][int(move.start.square.y)][int(move.start.square.x)][0]
         notation += 'x'
     notation += end_square
 
