@@ -62,8 +62,6 @@ class App:
 
     @staticmethod
     def loop():
-        App.client = AppClient()
-
         while not App._done:
             App._clock.tick(60)
             App.event_loop()

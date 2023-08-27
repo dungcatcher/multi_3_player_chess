@@ -2,12 +2,14 @@ import socket
 import threading
 import json
 
-HOST = "localhost"
+HOST = "oggyp.com"
 PORT = 65432
 
 
 class AppClient:
-    def __init__(self):
+    def __init__(self, host):
+        self.host = host
+
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connected = False
         self.last_message = None
@@ -24,7 +26,7 @@ class AppClient:
 
     def connect_to_server(self):
         try:
-            self.socket.connect((HOST, PORT))
+            self.socket.connect((self.host, PORT))
             print('connected')
             self.connected = True
             listen_thread = threading.Thread(target=self.listen, daemon=True)

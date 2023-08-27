@@ -4,6 +4,7 @@ from client.States.Lobby.lobby import Lobby
 from client.States.Login.login import Login
 from client.States.Analysis.analysis import Analysis
 from client.States.Register.register import Register
+from client.States.Address.address import Address
 
 """
 Moving to client and server folders:
@@ -38,9 +39,10 @@ def main():
         'game': Game(),
         'lobby': Lobby(),
         'login': Login(),
-        'register': Register()
+        'register': Register(),
+        'address': Address()
     }
-    App.init_states(state_dict, 'login')
+    App.init_states(state_dict, 'address')
     App.loop()
 
 
