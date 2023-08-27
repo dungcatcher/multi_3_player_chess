@@ -16,5 +16,8 @@
 ## Installation
 
 - If playing on Windows, python 3.11 must be installed from the Microsoft Store beforehand.
-1. Install the zip file of the code from GitHub.
-2. 
+1. Install the zip file of the code from GitHub by clicking on the green 'Code' button, and download zip.
+2. Extract the zip folder to any file location of choice.
+3. Open command prompt and change directory to the file location by typing ```cd {file location}```
+4. Type ```pip install shapely``` and ```pip install pygame```
+5. Then run the program by running ```python3 client.py```
