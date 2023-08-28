@@ -8,6 +8,7 @@ from .graphical_piece import GraphicalPiece
 from chesslogic.classes import Position
 from chesslogic.board import Board
 from chesslogic.movegen import piece_movegen
+from ...widget import Button
 
 """
 Fix code, merge with Game state
@@ -45,6 +46,8 @@ class Analysis(State):
 
         self.place_elements()
         self.generate_pieces()
+
+        self.back_button = Button(50, 50, App.window.get_width() * 0.1, App.window.get_height() * 0.05, 'Back', 'topleft', align='left')
 
         # -------------
 
@@ -150,6 +153,8 @@ class Analysis(State):
         self.place_elements()
 
     def update(self):
+        self.back_button.update()
+
         mouse_x, mouse_y = pygame.mouse.get_pos()
 
         # Dragging if piece is clicked on, and mouse is held down
@@ -199,10 +204,17 @@ class Analysis(State):
                         self.board.make_move(move)
                         self.highlighted_piece = None
 
+        if App.left_click:
+            if self.back_button.hovered:
+                self.done = True
+                self.next = 'login'
+
         self.draw()
 
     def draw(self):
         App.window.fill((250, 245, 240))
+
+        self.back_button.draw()
 
         pygame.draw.rect(App.window, (227, 228, 224), self.move_divider_rect)
         App.window.blit(self.board_image, self.board_rect)
