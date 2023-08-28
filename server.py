@@ -9,7 +9,7 @@ import atexit
 from server.game import Game
 from chesslogic.classes import json_to_move_obj
 
-HOST = "10.182.137.200"
+HOST = "localhost"
 PORT = 65432
 
 
@@ -122,15 +122,15 @@ class Server:
         # ----- Queue -----
         if response_dict['type'] == 'queue':
             username = self.get_username(conn)
-            already_in_game = False
+            existent_game_id = None  # The game id of the game they are queuing for if they are
             # Not already in a game
-            for game in self.games.values():
+            for game_id, game in self.games.items():
                 for player in game.player_data.values():
                     if conn == player['socket']:
-                        already_in_game = True
+                        existent_game_id = game_id
                         break
             if response_dict['data'] == 'new':  # New game created
-                if not already_in_game:
+                if not existent_game_id:
                     game_id = ''.join(random.choice(string.digits + string.ascii_letters) for _ in range(10))  # Random game id
                     new_game = Game()
                     new_game.add_player(username, conn)
@@ -139,7 +139,21 @@ class Server:
             elif response_dict['data'] != 'init':  # Joined existing game
                 target_game_id = response_dict['data']
                 if not self.games[target_game_id].started:
-                    if not already_in_game:
+                    if existent_game_id == target_game_id:
+                        player_colour = self.games[existent_game_id].player_data[username]['colour']
+
+                        self.games[existent_game_id].available_colours.append(player_colour)
+                        del self.games[existent_game_id].player_data[username]
+
+                        if not self.games[existent_game_id].player_data:
+                            self.thread_lock.acquire()
+                            del self.games[existent_game_id]
+                            self.thread_lock.release()
+
+                        # Send updated queue data to all users
+                        self.update_lobby()
+                    elif not existent_game_id:
+                        # Adds player to the game
                         self.games[target_game_id].add_player(username, conn)
                         # Check to see if the game has started
                         if self.games[target_game_id].started:
@@ -151,20 +165,6 @@ class Server:
                                 print(player_conn)
                                 send_response(player_conn, response_packet)
                                 self.in_lobby.remove(player_conn)
-                    else:  # Already in a game and trying to join
-                        # player_colour = self.games[target_game_id].player_data[username]['colour']
-                        #
-                        # self.games[target_game_id].available_colours.append(player_colour)
-                        # del self.games[target_game_id].player_data[username]
-                        #
-                        # if not self.games[target_game_id].player_data:
-                        #     self.thread_lock.acquire()
-                        #     del self.games[target_game_id]
-                        #     self.thread_lock.release()
-                        #
-                        # # Send updated queue data to all users
-                        # self.update_lobby()
-                        print('Already in game')
                 else:
                     print('Game is full')
             elif response_dict['data'] == 'init':
