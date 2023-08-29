@@ -211,6 +211,7 @@ class Server:
                 }
                 for username, data in self.games[game_id].player_data.items():
                     send_response(data['socket'], termination_packet)
+                    self.in_lobby.append(data['socket'])
 
                 self.thread_lock.acquire()
                 del self.games[game_id]
