@@ -2,14 +2,12 @@ import random
 from chesslogic.board import Board
 import time
 
-COLOURS = ['w', 'r', 'b']
-
 
 class Game:
     def __init__(self):
         # Init
         self.player_data = {}  # username: {socket, colour, time}
-        self.available_colours = COLOURS
+        self.available_colours = ['w', 'r', 'b']
         self.started = False
 
         self.start_timer = False
@@ -30,11 +28,10 @@ class Game:
         self.player_data[username] = {}
         self.player_data[username]['socket'] = conn
         # Get player colour
-        if self.available_colours:
-            player_colour = random.choice(self.available_colours)
-            self.available_colours.remove(player_colour)
-            self.player_data[username]['colour'] = player_colour
-            self.player_data[username]['time'] = 300
+        player_colour = random.choice(self.available_colours)
+        self.available_colours.remove(player_colour)
+        self.player_data[username]['colour'] = player_colour
+        self.player_data[username]['time'] = 300
 
         if len(self.player_data.keys()) == 3:
             self.started = True
