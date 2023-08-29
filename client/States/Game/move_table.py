@@ -31,12 +31,21 @@ def get_move_notation(board, move):
         capture = True
     end_square = COORDINATE_TABLE[move.end.segment][int(move.end.square.y)][int(move.end.square.x)]
 
-    if piece_id[1] != 'p':
-        notation += piece_id[1].upper()
-    if capture:
-        if piece_id[1] == 'p':
-            notation += COORDINATE_TABLE[move.start.segment][int(move.start.square.y)][int(move.start.square.x)][0]
-        notation += 'x'
-    notation += end_square
+    if move.move_type != 'kingside castle' and move.move_type != 'queenside castle':
+        if piece_id[1] != 'p':
+            notation += piece_id[1].upper()
+        if capture:
+            if piece_id[1] == 'p':
+                notation += COORDINATE_TABLE[move.start.segment][int(move.start.square.y)][int(move.start.square.x)][0]
+            notation += 'x'
+        notation += end_square
+    else:
+        if move.move_type == 'kingside castle':
+            notation += '0-0'
+        else:
+            notation += '0-0-0'
+
+    if move.is_promotion:
+        notation += '=' + move.promo_type.upper()
 
     return notation
