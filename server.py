@@ -9,7 +9,7 @@ import atexit
 from server.game import Game
 from chesslogic.classes import json_to_move_obj
 
-HOST = "10.182.137.200"
+HOST = "10.182.137.235"
 PORT = 65432
 
 
@@ -218,13 +218,13 @@ class Server:
                 self.thread_lock.release()
 
                 self.update_lobby()
-
-            if not self.games[game_id].start_timer:  # First move of the game
-                self.games[game_id].start_timer = True
-                self.games[game_id].previous_time = time.time()
-            for username, player in self.games[game_id].player_data.items():  # Update user time
-                if player['colour'] == self.games[game_id].board.turn:
-                    self.games[game_id].turn = username
+            else:  # If game hasn't terminated
+                if not self.games[game_id].start_timer:  # First move of the game
+                    self.games[game_id].start_timer = True
+                    self.games[game_id].previous_time = time.time()
+                for username, player in self.games[game_id].player_data.items():  # Update user time
+                    if player['colour'] == self.games[game_id].board.turn:
+                        self.games[game_id].turn = username
 
     def remove_socket(self, conn):
         # Remove from lobby
