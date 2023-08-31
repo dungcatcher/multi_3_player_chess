@@ -130,6 +130,31 @@ class Game(State):
         self.back_button = Button(self.termination_rect.centerx, self.termination_rect.bottom - self.termination_rect.height * 0.1,
                                   self.termination_rect.width * 0.5, self.termination_rect.height * 0.1, 'Back to Lobby', 'midbottom', align='center')
 
+    def reset(self):
+        self.graphical_pieces = []
+        self.board = Board()
+
+        self.colour = None
+        self.rotation_idx = 0  # 0: white, 1: black: 2: red
+        self.game_id = None
+
+        self.terminated = False
+        self.termination_type = None
+        self.results = None
+
+        self.segment_polygons = None
+
+        self.place_elements()
+        self.generate_pieces()
+
+        self.highlighted_piece = None
+
+        self.move_list = []  # [white, black, red], ...
+        self.notation_labels = []
+
+        self.time_dict = {}
+        self.clocks = {}
+
     def load_spritesheet(self):
         piece_size = 135
         chess_sprite_image = pygame.image.load('./Assets/chess_pieces.png').convert_alpha()
@@ -442,6 +467,8 @@ class Game(State):
                 if self.back_button.hovered:
                     self.done = True
                     self.next = 'lobby'
+
+                    self.reset()
 
                     # Request queue data
                     request_data = {

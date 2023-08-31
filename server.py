@@ -132,6 +132,7 @@ class Server:
                     self.thread_lock.acquire()
                     game_id = ''.join(random.choice(string.digits + string.ascii_letters) for _ in range(10))  # Random game id
                     new_game = Game()
+                    print(new_game.available_colours, new_game.player_data)
                     new_game.add_player(username, conn)
                     self.games[game_id] = new_game
                     self.thread_lock.release()
@@ -155,6 +156,7 @@ class Server:
                     elif not existent_game_id:
                         # Adds player to the game
                         self.games[target_game_id].add_player(username, conn)
+                        print(self.games[target_game_id].player_data)
                         # Check to see if the game has started
                         if self.games[target_game_id].started:
                             # All users need board data, players and their colours,
@@ -217,13 +219,13 @@ class Server:
                 self.thread_lock.release()
 
                 self.update_lobby()
-
-            if not self.games[game_id].start_timer:  # First move of the game
-                self.games[game_id].start_timer = True
-                self.games[game_id].previous_time = time.time()
-            for username, player in self.games[game_id].player_data.items():  # Update user time
-                if player['colour'] == self.games[game_id].board.turn:
-                    self.games[game_id].turn = username
+            else:  # Game is still going
+                if not self.games[game_id].start_timer:  # First move of the game
+                    self.games[game_id].start_timer = True
+                    self.games[game_id].previous_time = time.time()
+                for username, player in self.games[game_id].player_data.items():  # Update user time
+                    if player['colour'] == self.games[game_id].board.turn:
+                        self.games[game_id].turn = username
 
     def remove_socket(self, conn):
         # Remove from lobby
