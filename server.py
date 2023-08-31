@@ -1,15 +1,13 @@
-import atexit
 import socket
 import threading
 import json
 import random
 import string
 import time
-import atexit
 from server.game import Game
 from chesslogic.classes import json_to_move_obj
 
-HOST = "localhost"
+HOST = "10.182.138.120"
 PORT = 65432
 
 
@@ -131,10 +129,12 @@ class Server:
                         break
             if response_dict['data'] == 'new':  # New game created
                 if not existent_game_id:
+                    self.thread_lock.acquire()
                     game_id = ''.join(random.choice(string.digits + string.ascii_letters) for _ in range(10))  # Random game id
                     new_game = Game()
                     new_game.add_player(username, conn)
                     self.games[game_id] = new_game
+                    self.thread_lock.release()
 
             elif response_dict['data'] != 'init':  # Joined existing game
                 target_game_id = response_dict['data']
